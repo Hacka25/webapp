@@ -1,1 +1,17 @@
-# webapp
+# Project Name 
+[![License](https://img.shields.io/badge/license-MIT%20License--see%20also%20later.-orange)](LICENSE_NAME)(&lt;optional1>][user] [<other user's avatar name>])
+## Description 
+This is a brief description of the project. It should be concise (1-3 sentence), clear, and to the point about what it does - more detail here!...    More text can follow in between describing additional details as needed for clarity..   For example: "In our interactive story game 'Echoes', users will have a chance..."
+## Table of Contents 
+1. [Installation](#install)    	2. [Usage](#usage-example),   3. [Contributing]() (4. [Tests])     5.[Questions and Support],  6[License].      7. Project Status, etc...
+## Install Instructions: 
+Provide instructions on how to install your project locally in a step by one way formatting as needed..    Follow these steps for the best results!    1) Setup code repository if not done already .        2 )Install npm packages - `npm i` ..  3.) Run tests- ensure all functionality is working.       4.) Start coding…
+## Usage Example – If applicable: Provide usage instructions or screen captures here..    You can use these templates as a guide for your README file, but you should customize them to fit the specifics of each project!     For example : "If it's not used yet then start with this. Then continue from there!"
+## Contributing – If applicable: Write guidelines on how others may contribute..   Follow these steps when contributing back.:   1) Fork repository (2). Make changes in new branch, do commits and push to your forked repo.(3.) Create a pull request against the original project’s master.
+## Tests – If applicable: Describe tests that were done for this specific section of code.,   Following best practices is recommended..    Test should be as comprehensive or necessary in order not just satisfy basic functionality, but also edge cases and random scenarios such case study testing (`npm test`). Follow these steps to perform those operations.
+## Questions & Support: If you have any questions about this project – don't hesitate asking! Use the following methods for communication..   1) Email at `support@emailaddressesomethinghere... .      2 ) Social Media Handles (e.g., twitter, facebook handles etc.)  
+## License - MIT license: Detail information on which copyleft terms are being used here and when to use it…  Read more about [MIT LICENSE](https://opensource.org/licenses/MIT) for a complete understanding..    This will be automatically added by the readme generator if not provided elsewhere in this file (`add-license: true, add-to-readme : MIT license © 2019 Your Name or your organization name - Permission is hereby granted ... `
+## Project Status： Use a project tracking system like JIRA to track the progress of features and bugs.   You can create an issue in this way: "New feature [feature-name]" (or bug report "[bug-description]")..  Including these lines will help your readers know what's coming up next or how long they have left before something becomes a requirement for future updates, among other things!
+## Credits： List all the people who contributed to this project.   You should list everyone named in their contribution and also indicate if any of them are still active on your team..  Include one person's full name (and optionally an alias) at a time due to space constraints, then follow up with another contributor’s information…
+
+
