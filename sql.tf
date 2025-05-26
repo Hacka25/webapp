@@ -16,4 +16,3 @@ resource "google_sql_user" "users" {
   instance = google_sql_database_instance.mysql_instance.name
   password = var.db_password
 }
-
