@@ -1,0 +1,39 @@
+name: Generate Architecture Diagram
+
+on:
+  workflow_dispatch:  # Manual trigger
+  push:
+    branches: [main]  # or your default branch
+
+jobs:
+  diagram:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # Needed to commit back the file
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: pip install openai
+
+      - name: Generate architecture diagram
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python .github/scripts/gen_diagram.py
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add docs/architecture.md
+          git commit -m "Auto-generate architecture diagram"
+          git push || echo "No changes to commit"
