@@ -59,9 +59,8 @@ This file defines a Kubernetes deployment for the web application.
 
 This file defines a Kubernetes service for the web application, exposing port 80 and targeting port 8080.
 
-I hope this README.md meets your expectations!
-
-## Architecture Diagram
+**Architecture Diagram**
+-------------------------
 
 ```mermaid
 graph TD
@@ -88,4 +87,32 @@ X[Service] --> Y[K8s Service]
 
 W --> Z[Deployment YAML]
 Y --> AA[Service YAML]
+```
+
+By following this README.md, you should be able to deploy and run the project successfully.
+
+## Architecture Diagram
+
+```mermaid
+graph TD
+A[Variables] -->|reads from| B[Files]
+B --> C[Project ID] --> D[Google Cloud]
+E[Region] --> D
+F[GKE Cluster Name] --> D
+G[DB User] --> D
+H[DB Password] --> D
+I[SQL Instance Connection Name] --> D
+
+A --> J[File: variables.tf]
+K[File: output.tf] --> L[Code Base]
+
+M[Resources] --> N[Google Cloud SQL]
+O[GKE Cluster] --> P[Google Container Cluster]
+Q[Node Pool] --> R[Google Container Node Pool]
+
+S[Kubernetes] --> T[K8s Deployment]
+U[Service] --> V[K8s Service]
+
+T --> W[Deployment YAML]
+V --> X[Service YAML]
 ```
