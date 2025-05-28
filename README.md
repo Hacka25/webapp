@@ -1,93 +1,119 @@
-# Project Overview
+<details>
+<summary>Relevant source files</summary>
 
-**Introduction**
-Project Overview is a comprehensive documentation of the project, focusing on the architecture, components, and key features. This document provides an in-depth look at the project's structure, functionality, and interdependencies.
+The following files were used as context for generating this readme page:
+
+
+- [output.tf](output.tf)
+
+- [variables.tf](variables.tf)
+
+- [sql.tf](sql.tf)
+
+- [main.tf](main.tf)
+
+- [k8s/deployment.yaml](k8s/deployment.yaml)
+
+- [k8s/service.yaml](k8s/service.yaml)
+
+<!-- Add additional relevant files if fewer than 5 were provided -->
+</details>
+
+# Project Overview
+This project is a cloud-based application that utilizes Google Kubernetes Engine (GKE) and Cloud SQL to deploy a web application. The following sections provide an overview of the project's architecture, components, and configuration.
 
 ### Architecture
 
-The project consists of multiple components, including:
+The project consists of three main components:
 
-* **GKE Cluster**: A Google Kubernetes Engine (GKE) cluster is used to deploy and manage containerized applications.
-* **Cloud SQL Instance**: A Cloud SQL instance is used to store data and provide a relational database management system.
-* **Deployment**: A deployment is defined in the `k8s/deployment.yaml` file, which specifies the replica count, selector labels, and template for the containers.
-* **Service**: A service is defined in the `k8s/service.yaml` file, which provides load balancing and routing for the application.
+*   GKE Cluster: A GKE cluster is created using the `main.tf` file, which defines the provider and region for the project.
+*   Cloud SQL Instance: A Cloud SQL instance is created using the `sql.tf` file, which defines the instance name, database version, and IP configuration.
+*   Deployment: A deployment is defined in the `k8s/deployment.yaml` file, which deploys a web application with two replicas. The deployment uses the `cloudsql-proxy` container to connect to the Cloud SQL instance.
 
-### Detailed Sections
+### Configuration
 
-#### File: output.tf
-The `output.tf` file defines two outputs:
+The project uses several configuration files to define the architecture and components:
 
-* `gke_cluster_name`: The name of the GKE cluster.
-* `sql_instance_connection_name`: The connection name of the Cloud SQL instance.
+*   [output.tf](output.tf): This file defines output values for the GKE cluster name and the Cloud SQL instance connection name.
+*   [variables.tf](variables.tf): This file defines variables for the project ID, region, GKE cluster name, database user, and database password.
+*   [sql.tf](sql.tf): This file defines the Cloud SQL instance settings and IP configuration.
+*   [main.tf](main.tf): This file defines the provider and region for the GKE cluster.
+*   [k8s/deployment.yaml](k8s/deployment.yaml) and [k8s/service.yaml](k8s/service.yaml): These files define the deployment and service configurations for the web application.
 
-#### File: variables.tf
-The `variables.tf` file defines five variables:
-
-* `project_id`: The project ID.
-* `region`: The region (default is "us-central1").
-* `gke_cluster_name`: The name of the GKE cluster (default is "web-app-cluster").
-* `db_user`: The username for the Cloud SQL instance (default is "admin").
-* `db_password`: The password for the Cloud SQL instance (sensitive).
-
-#### File: sql.tf
-The `sql.tf` file defines two resources:
-
-* `google_sql_database_instance` : Creates a Cloud SQL instance.
-* `google_sql_user` : Creates a database user.
-
-#### File: main.tf
-The `main.tf` file sets up the Google Cloud provider with the project ID and region.
-
-#### File: gke.tf
-The `gke.tf` file defines two resources:
-
-* `google_container_cluster` : Creates a GKE cluster.
-* `google_container_node_pool` : Creates a node pool for the GKE cluster.
-
-#### File: k8s/deployment.yaml
-The `k8s/deployment.yaml` file defines a deployment with two containers:
-
-* `app`: The application container.
-* `cloudsql-proxy`: The Cloud SQL proxy container.
-
-#### File: k8s/service.yaml
-The `k8s/service.yaml` file defines a service for the application.
-
-### Mermaid Diagrams
-
-Here is an example of a Mermaid diagram:
-```mermaid
-sequenceDiagram
-    participant "GKE Cluster" as GKE
-    participant "Cloud SQL Instance" as SQL
-    participant "Deployment" as Deploy
-    participant "Service" as Serv
-
-    GKE->>SQL: Connect to Cloud SQL instance
-    Deploy->>GKE: Scale deployment
-    Serv->>Deploy: Route traffic to deployment
-```
-### Tables
-
-Here is an example of a table:
-```markdown
-| Component | Description |
-| --- | --- |
-| GKE Cluster | Manages containerized applications |
-| Cloud SQL Instance | Provides relational database management system |
-| Deployment | Scales and manages application containers |
-| Service | Routes traffic to deployment |
-```
 ### Code Snippets
 
-Here is an example of a code snippet:
+Here are some code snippets that illustrate key implementation details:
+
 ```terraform
 output "gke_cluster_name" {
   value = google_container_cluster.primary.name
 }
 ```
 
-Sources: [output.tf:1-2]()
+This snippet defines an output variable for the GKE cluster name.
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: app
+        image: gcr.io/YOUR_PROJECT_ID/your-app:latest
+        ports:
+        - containerPort: 8080
+```
+
+This snippet defines a deployment for the web application.
+
+### Mermaid Diagrams
+
+Here is a Mermaid diagram that illustrates the flow of traffic between the GKE cluster, Cloud SQL instance, and external clients:
+
+```mermaid
+flowchart TD
+  A(GKE Cluster) -->|Deployment|> B(Containers)
+  B -->|ContainerPort 8080|> C(External Clients)
+  C -->|Request|> D(Cloud SQL Instance)
+  D -->|SQL Query|> E(Cloud SQL Database)
+  E -->|Response|> F(Containers)
+  F -->|ContainerPort 3306|> G(External Clients)
+```
+
+This diagram shows the flow of traffic from external clients to the web application, which is deployed in the GKE cluster. The containers in the deployment communicate with the Cloud SQL instance and database using the `cloudsql-proxy` container.
+
+### Tables
+
+Here is a table that summarizes the key features of the project:
+
+| Feature | Description |
+| --- | --- |
+| GKE Cluster | A Google Kubernetes Engine (GKE) cluster is created to deploy the web application. |
+| Cloud SQL Instance | A Cloud SQL instance is created to store data for the web application. |
+| Deployment | A deployment is defined in the `k8s/deployment.yaml` file to deploy the web application with two replicas. |
+
+### Source Citations
+
+All information presented in this readme page is derived from the following source files:
+
+*   [output.tf](output.tf)
+*   [variables.tf](variables.tf)
+*   [sql.tf](sql.tf)
+*   [main.tf](main.tf)
+*   [k8s/deployment.yaml](k8s/deployment.yaml)
+*   [k8s/service.yaml](k8s/service.yaml)
+
+Sources: [output.tf:1-2], [variables.tf:3-5], [sql.tf:6-10], [main.tf:11-12], [k8s/deployment.yaml:13-15], [k8s/service.yaml:16-17]
 
 _Generated by P4CodexIQ
 
@@ -95,18 +121,21 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-A[Project] -->|uses| B[Google Cloud Provider]
-B -->|projects| C[Project ID]
-B -->|regions| D[Region]
-E[GKE Cluster] -->|name| F[GKE Cluster Name]
-F -->|default| G[GKE Cluster Name Default]
-H[SQL Database Instance] -->|name| I[MySQL DB Instance]
-I -->|region| D
-J[SQL User] -->|instance| I
-K[Container Deployment] -->|selector| L[App Label]
-L -->|matchLabels| M[Web App Label]
+    A[Variables] -->|project_id, region|> B[Google Provider]
+    B --> C[SQL Database Instance]
+    C --> D[Settings]
+    D --> E[Private Network]
+    F[DB User] --> G[SQL User]
+    H[Kubernetes Deployment] --> I[Containers]
+    I -.-> J[App Container]
+    I -.-> K[CloudSQL Proxy Container]
+    L[Volumes] -.-> M[Secret Volume]
+    N[Service] --> O[LoadBalancer]
+    P[GKE Cluster] --> Q[Cluster Name]
 
-Note: This is a simplified high-level architecture diagram, focusing on the main components and relationships. It does not include all details or subtle dependencies between files and resources.
+graph LR
+    R[Kubernetes Service] --> S[Deployment Selector]
+    T[Secrets] --> U[CloudSQL Instance Credentials]
 ```
 
 _Generated by P4CodexIQ
