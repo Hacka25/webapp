@@ -1,57 +1,75 @@
-<details>
-<summary>Relevant source files</summary>
-
-The following files were used as context for generating this readme page:
-
-
-- [output.tf](output.tf)
-
-- [variables.tf](variables.tf)
-
-- [sql.tf](sql.tf)
-
-- [main.tf](main.tf)
-
-- [k8s/deployment.yaml](k8s/deployment.yaml)
-
-- [k8s/service.yaml](k8s/service.yaml)
-
-<!-- Add additional relevant files if fewer than 5 were provided -->
-</details>
-
 # Project Overview
-This project is a cloud-based application that utilizes Google Kubernetes Engine (GKE) and Cloud SQL to deploy a web application. The following sections provide an overview of the project's architecture, components, and configuration.
+This project is a cloud-native application that utilizes Google Cloud Platform (GCP) services to deploy and manage a scalable web application. The overview will provide a concise introduction, detailed sections, Mermaid diagrams, tables, code snippets, and source citations.
 
-### Architecture
+## Introduction
 
-The project consists of three main components:
+The project aims to create a highly available and scalable web application using GCP's managed environment for deploying, managing, and scaling containerized applications, Google Kubernetes Engine (GKE). It includes the deployment of a MySQL database instance on Cloud SQL, connecting to it via cloudsql-proxy containers in the GKE cluster. The application uses environment variables to connect to the database and exposes its service as a LoadBalancer.
 
-*   GKE Cluster: A GKE cluster is created using the `main.tf` file, which defines the provider and region for the project.
-*   Cloud SQL Instance: A Cloud SQL instance is created using the `sql.tf` file, which defines the instance name, database version, and IP configuration.
-*   Deployment: A deployment is defined in the `k8s/deployment.yaml` file, which deploys a web application with two replicas. The deployment uses the `cloudsql-proxy` container to connect to the Cloud SQL instance.
+## Architecture
 
-### Configuration
+### Deployment
 
-The project uses several configuration files to define the architecture and components:
+The project deploys two replicas of the web application using a GKE deployment:
 
-*   [output.tf](output.tf): This file defines output values for the GKE cluster name and the Cloud SQL instance connection name.
-*   [variables.tf](variables.tf): This file defines variables for the project ID, region, GKE cluster name, database user, and database password.
-*   [sql.tf](sql.tf): This file defines the Cloud SQL instance settings and IP configuration.
-*   [main.tf](main.tf): This file defines the provider and region for the GKE cluster.
-*   [k8s/deployment.yaml](k8s/deployment.yaml) and [k8s/service.yaml](k8s/service.yaml): These files define the deployment and service configurations for the web application.
-
-### Code Snippets
-
-Here are some code snippets that illustrate key implementation details:
-
-```terraform
-output "gke_cluster_name" {
-  value = google_container_cluster.primary.name
-}
+```mermaid
+graph TD
+  A[web-app] -->|replica 1|> B
+  A[web-app] -->|replica 2|> C
 ```
 
-This snippet defines an output variable for the GKE cluster name.
+SOURCES: [k8s/deployment.yaml](#page-anchor-or-id)
 
+### Service
+
+The project exposes the web application as a LoadBalancer service:
+
+```mermaid
+sequenceDiagram
+  participant Web App as "Web App"
+  participant Load Balancer as "Load Balancer"
+  note over Web App,"Request incoming!"
+  Load Balancer->>Web App: Request
+```
+
+SOURCES: [k8s/service.yaml](#page-anchor-or-id)
+
+### Cloud SQL
+
+The project creates a MySQL database instance on Cloud SQL:
+
+```mermaid
+classDiagram
+  class MySQLDatabaseInstance {
+    -name
+    -database_version
+    -region
+  }
+  class GoogleSqlUser {
+    -name
+    -instance
+    -password
+  }
+```
+
+SOURCES: [sql.tf](#page-anchor-or-id)
+
+### Environment Variables
+
+The project uses environment variables to connect to the database:
+
+```markdown
+| Variable | Value |
+| --- | --- |
+| DB_HOST | 127.0.0.1 |
+| DB_USER | admin |
+| DB_PASSWORD | password |
+```
+
+SOURCES: [k8s/deployment.yaml](#page-anchor-or-id)
+
+## Code Snippets
+
+### Deployment YAML
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -72,70 +90,111 @@ spec:
         image: gcr.io/YOUR_PROJECT_ID/your-app:latest
         ports:
         - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: 127.0.0.1
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.33.0
+        command: ["/cloud_sql_proxy",
+                  "-instances=PROJECT_ID:REGION:mysql-db=tcp:3306",
+                  "-credential_file=/secrets/service_account.json"]
+        volumeMounts:
+        - name: sql-creds
+          mountPath: /secrets
+          readOnly: true
+
+      volumes:
+      - name: sql-creds
+        secret:
+          secretName: cloudsql-instance-credentials
 ```
 
-This snippet defines a deployment for the web application.
+SOURCES: [k8s/deployment.yaml](#page-anchor-or-id)
 
-### Mermaid Diagrams
-
-Here is a Mermaid diagram that illustrates the flow of traffic between the GKE cluster, Cloud SQL instance, and external clients:
-
-```mermaid
-flowchart TD
-  A(GKE Cluster) -->|Deployment|> B(Containers)
-  B -->|ContainerPort 8080|> C(External Clients)
-  C -->|Request|> D(Cloud SQL Instance)
-  D -->|SQL Query|> E(Cloud SQL Database)
-  E -->|Response|> F(Containers)
-  F -->|ContainerPort 3306|> G(External Clients)
+### Service YAML
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080
 ```
 
-This diagram shows the flow of traffic from external clients to the web application, which is deployed in the GKE cluster. The containers in the deployment communicate with the Cloud SQL instance and database using the `cloudsql-proxy` container.
+SOURCES: [k8s/service.yaml](#page-anchor-or-id)
 
-### Tables
+### Terraform Configuration
+```terraform
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
 
-Here is a table that summarizes the key features of the project:
+resource "google_sql_database_instance" "mysql_instance" {
+  name             = "mysql-db"
+  database_version = "MYSQL_8_0"
+  region           = var.region
 
-| Feature | Description |
-| --- | --- |
-| GKE Cluster | A Google Kubernetes Engine (GKE) cluster is created to deploy the web application. |
-| Cloud SQL Instance | A Cloud SQL instance is created to store data for the web application. |
-| Deployment | A deployment is defined in the `k8s/deployment.yaml` file to deploy the web application with two replicas. |
+  settings {
+    tier = "db-f1-micro"
+    ip_configuration {
+      private_network = "projects/${var.project_id}/global/networks/default"
+    }
+  }
+}
 
-### Source Citations
+resource "google_sql_user" "users" {
+  name     = var.db_user
+  instance = google_sql_database_instance.mysql_instance.name
+  password = var.db_password
+}
+```
 
-All information presented in this readme page is derived from the following source files:
+SOURCES: [sql.tf](#page-anchor-or-id)
 
-*   [output.tf](output.tf)
-*   [variables.tf](variables.tf)
-*   [sql.tf](sql.tf)
-*   [main.tf](main.tf)
-*   [k8s/deployment.yaml](k8s/deployment.yaml)
-*   [k8s/service.yaml](k8s/service.yaml)
+### Variables
+```terraform
+variable "project_id" {}
+variable "region" {
+  default = "us-central1"
+}
+variable "gke_cluster_name" {
+  default = "web-app-cluster"
+}
+variable "db_user" {
+  default = "admin"
+}
+variable "db_password" {
+  sensitive = true
+}
+```
 
-Sources: [output.tf:1-2], [variables.tf:3-5], [sql.tf:6-10], [main.tf:11-12], [k8s/deployment.yaml:13-15], [k8s/service.yaml:16-17]
+SOURCES: [variables.tf](#page-anchor-or-id)
+
+## Conclusion
+
+The project provides a scalable and highly available web application using GCP services, including Cloud SQL for database management. The deployment uses environment variables to connect to the database and exposes its service as a LoadBalancer.
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-    A[Variables] -->|project_id, region|> B[Google Provider]
-    B --> C[SQL Database Instance]
-    C --> D[Settings]
-    D --> E[Private Network]
-    F[DB User] --> G[SQL User]
-    H[Kubernetes Deployment] --> I[Containers]
-    I -.-> J[App Container]
-    I -.-> K[CloudSQL Proxy Container]
-    L[Volumes] -.-> M[Secret Volume]
-    N[Service] --> O[LoadBalancer]
-    P[GKE Cluster] --> Q[Cluster Name]
-
-graph LR
-    R[Kubernetes Service] --> S[Deployment Selector]
-    T[Secrets] --> U[CloudSQL Instance Credentials]
-```
+> ⚠️ Mermaid diagram generation failed.
 
 _Generated by P4CodexIQ
