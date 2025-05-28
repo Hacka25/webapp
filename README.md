@@ -54,10 +54,10 @@ The project uses Terraform variables to define configuration options for the pro
 ## Mermaid Diagrams
 ```mermaid
 graph TD
-  A(GKE Cluster) -->|connects to|> B(Google SQL Database Instance)
-  C(Cloud SQL Proxy) -->|connects to|> B
-  D(Web Application Deployment) -->|runs on|> A
-  E(Service) -->|exposes|> D
+  A(GKE Cluster) -->|connects to| B(Google SQL Database Instance)
+  C(Cloud SQL Proxy) -->|connects to| B
+  D(Web Application Deployment) -->|runs on| A
+  E(Service) -->|exposes| D
 ```
 This diagram shows the relationships between the GKE cluster, Google SQL Database Instance, Cloud SQL Proxy, web application deployment, and service.
 
