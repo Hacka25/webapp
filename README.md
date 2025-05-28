@@ -13,8 +13,8 @@ The project deploys two replicas of the web application using a GKE deployment:
 
 ```mermaid
 graph TD
-  A[web-app] -->|replica 1|> B
-  A[web-app] -->|replica 2|> C
+  A[web-app] -->|replica 1| B
+  A[web-app] -->|replica 2| C
 ```
 
 SOURCES: [k8s/deployment.yaml](#page-anchor-or-id)
