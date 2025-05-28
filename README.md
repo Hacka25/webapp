@@ -1,28 +1,67 @@
-**Project Overview**
+Here is the generated README file:
 
-The purpose of this project is to deploy a scalable and secure infrastructure for web applications using Google Cloud Platform (GCP) services. The project includes the following components:
+# Project Overview
 
-### GKE Cluster
+Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
 
-The project creates a GKE cluster with one node pool and two nodes.
+**Introduction:** This project deploys a scalable and secure infrastructure for web applications using Google Cloud Platform (GCP) services. The project includes the following components: GKE Cluster, Google SQL Database Instance, Cloud SQL Proxy, Web Application Deployment, and Service.
 
-### Google SQL Database Instance
+### Detailed Sections:
 
-The project creates a MySQL instance named "mysql-db" in the "us-central1" region.
+#### GKE Cluster
 
-### Cloud SQL Proxy
+The project creates a GKE cluster with one node pool and two nodes. This is defined in `gke.tf`.
 
-The project deploys a Cloud SQL Proxy container to connect to the MySQL instance from within the GKE cluster.
+```
+graph TD
+A(GKE Cluster) -->|connects to| B(Google SQL Database Instance)
+C(Cloud SQL Proxy) -->|connects to| B
+D(Web Application Deployment) -->|runs on| A
+E(Service) -->|exposes| D
+```
 
-### Web Application Deployment
+**Sources:** [gke.tf:1-10]
 
-The project deploys a web application using a Kubernetes deployment named "web-app".
+#### Google SQL Database Instance
 
-### Service
+The project creates a MySQL instance named "mysql-db" in the "us-central1" region. This is defined in `sql.tf`.
 
-The project defines a Kubernetes service named "web-app-service" that exposes the web application to the outside world.
+**Sources:** [sql.tf:1-5]
 
-**Architecture Diagram**
+#### Cloud SQL Proxy
+
+The project deploys a Cloud SQL Proxy container to connect to the MySQL instance from within the GKE cluster. This is defined in `k8s/deployment.yaml`.
+
+```
+volumeMounts:
+- name: sql-creds
+  mountPath: /secrets
+  readOnly: true
+```
+
+**Sources:** [k8s/deployment.yaml:1-5]
+
+#### Web Application Deployment
+
+The project deploys a web application using a Kubernetes deployment named "web-app". This is defined in `k8s/deployment.yaml`.
+
+```
+containers:
+- name: app
+  image: gcr.io/YOUR_PROJECT_ID/your-app:latest
+  ports:
+  - containerPort: 8080
+```
+
+**Sources:** [k8s/deployment.yaml:1-10]
+
+#### Service
+
+The project defines a Kubernetes service named "web-app-service" that exposes the web application to the outside world using a LoadBalancer type and port 80. This is defined in `k8s/service.yaml`.
+
+**Sources:** [k8s/service.yaml:1-5]
+
+### Mermaid Diagrams:
 
 ```mermaid
 graph TD
@@ -32,7 +71,39 @@ D(Web Application Deployment) -->|runs on| A
 E(Service) -->|exposes| D
 ```
 
-**Sources:**
+**Sources:** [README.md:1-5]
+
+### Tables:
+
+N/A
+
+### Code Snippets:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: app
+        image: gcr.io/YOUR_PROJECT_ID/your-app:latest
+        ports:
+        - containerPort: 8080
+```
+
+**Sources:** [k8s/deployment.yaml:1-5]
+
+### Source Citations:
 
 The README file cites the following source files:
 
@@ -46,35 +117,11 @@ The README file cites the following source files:
 
 These sources are used to generate the information presented in the README file.
 
-**File: sql.tf**
+**Technical Accuracy:** All information must be derived SOLELY from the `[RELEVANT_SOURCE_FILES]`. Do not infer, invent, or use external knowledge unless it's directly supported by the provided code. If information is not present in the provided files, do not include it or explicitly state its absence if crucial to the topic.
 
-The `sql.tf` file defines a Google SQL Database Instance named "mysql-db" with a database version of "MYSQL_8_0" and a region of "us-central1". The settings include a tier of "db-f1-micro" and IP configuration for a private network.
+**Conclusion/Summary:** This project deploys a scalable and secure infrastructure for web applications using GCP services. The architecture includes a GKE cluster, Google SQL Database Instance, Cloud SQL Proxy, web application deployment, and service.
 
-**File: main.tf**
-
-The `main.tf` file sets up the Google provider with a project ID and region.
-
-**File: gke.tf**
-
-The `gke.tf` file defines a GKE cluster named "primary" with one node pool and two nodes. The cluster is located in the specified region, and the default node pool is removed.
-
-**File: k8s/deployment.yaml**
-
-The `k8s/deployment.yaml` file defines a Kubernetes deployment named "web-app" that runs two replicas of an application container. The container uses an image from Google Container Registry and exposes port 8080. It also sets environment variables for the database host, username, and password.
-
-**File: k8s/service.yaml**
-
-The `k8s/service.yaml` file defines a Kubernetes service named "web-app-service" that exposes the web application to the outside world using a LoadBalancer type and port 80.
-
-**Conclusion/Summary**
-
-This project deploys a scalable and secure infrastructure for web applications using GCP services. The architecture includes a GKE cluster, Google SQL Database Instance, Cloud SQL Proxy, web application deployment, and service. The project uses Terraform to set up the infrastructure and Kubernetes to deploy the web application.
-
-_Generated by auto_readme.py on 2025-05-28 05:28 UTC_
-
-Note: The sources listed at the end of this README file are used to generate the information presented in this document.
-
-_Generated by auto_readme.py on 2025-05-28 05:47 UTC_
+_Generated by auto_readme.py on 2025-05-28 06:18 UTC_
 
 ## Architecture Diagram
 
@@ -86,4 +133,4 @@ D(Web Application Deployment) -->|runs on| A
 E(Service) -->|exposes| D
 ```
 
-_Generated by auto_readme.py on 2025-05-28 05:47 UTC_
+_Generated by auto_readme.py on 2025-05-28 06:18 UTC_
