@@ -2,8 +2,8 @@ name: Generate Architecture Diagram
 
 on:
   workflow_dispatch:  # Manual trigger
-  push:
-    branches: [main]  # or your default branch
+  # push:
+  #   branches: [main]  # or your default branch
 
 jobs:
   diagram:
