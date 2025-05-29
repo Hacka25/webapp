@@ -1,84 +1,53 @@
-Here's a possible "Project Overview" markdown file that incorporates the provided source files:
-
-<details>
-<summary>Relevant source files</summary>
-
-The following files were used as context for generating this readme page:
-
-
-- [output.tf](output.tf)
-
-- [variables.tf](variables.tf)
-
-- [sql.tf](sql.tf)
-
-- [main.tf](main.tf)
-
-- [k8s/deployment.yaml](k8s/deployment.yaml)
-
-- [k8s/service.yaml](k8s/service.yaml)
-
-<!-- Add additional relevant files if fewer than 5 were provided -->
-</details>
-
 # Project Overview
 
-This project is a cloud-based deployment of a web application that utilizes Google Cloud SQL and Kubernetes (GKE) for database management and container orchestration, respectively. The following sections provide an overview of the architecture, components, data flow, and logic relevant to this project.
+The project is a comprehensive overview of the infrastructure and architecture implemented in the provided source files. This document aims to provide a detailed understanding of the components, data flow, and logic involved in the project.
 
 ## Introduction
-The purpose of this project is to create a scalable and secure infrastructure for hosting a web application using Google Cloud Platform's services. This includes setting up a MySQL database instance, creating a Kubernetes deployment and service for the web application, and configuring environment variables and secrets.
 
-### Architecture
+This project involves setting up a Google Cloud SQL instance and deploying a web application using Kubernetes (K8s) on Google Container Engine (GKE). The project utilizes Terraform configuration files (`output.tf`, `variables.tf`, `sql.tf`, and `main.tf`) to create and manage the infrastructure, along with deployment and service YAML files (`k8s/deployment.yaml` and `k8s/service.yaml`) to deploy and configure the web application.
 
-The architecture consists of three main components:
+### Cloud SQL
 
-* **Google Cloud SQL**: A managed relational database service that provides a scalable and secure storage solution.
-* **Kubernetes (GKE)**: An orchestration platform that automates the deployment, scaling, and management of containers.
-* **Web Application**: A containerized application that uses environment variables and secrets to connect to the MySQL database.
+The project sets up a MySQL 8.0 instance on Google Cloud SQL using the `google_sql_database_instance` resource. The instance is created with a private network configuration, allowing for secure communication between the database and other services.
+
+## Architecture
+
+The following diagram illustrates the architecture of the project:
+
+```mermaid
+graph TD
+    A[Cloud SQL] -->|Database Connection|> B[Kubernetes Cluster]
+    B -->|Deployment|> C[Web Application]
+    C -->|Request/Response|> D[Service]
+```
+
+In this architecture, the Cloud SQL instance is connected to a Kubernetes cluster, which deploys and manages the web application. The web application receives requests from the service and processes them accordingly.
+
+### Key Components
+
+The project involves several key components:
+
+*   **Cloud SQL**: A MySQL 8.0 instance created using Terraform.
+*   **Kubernetes Cluster**: A GKE cluster created using Terraform, which deploys and manages the web application.
+*   **Web Application**: A deployment YAML file that defines the container image, ports, and environment variables for the web application.
 
 ### Data Flow
 
 The data flow in this project involves:
 
-* The web application retrieving data from the MySQL database using environment variables and secrets.
-* The MySQL database storing and managing data for the web application.
+*   The Cloud SQL instance stores data for the web application.
+*   The web application receives requests from the service and processes them accordingly.
+*   The processed data is stored in the database.
 
-### Logic
+## Code Snippets
 
-The logic behind this project includes:
-
-* Setting up a Google Cloud SQL instance with a private IP address and a service account to manage credentials.
-* Creating a Kubernetes deployment for the web application that uses environment variables and secrets to connect to the MySQL database.
-* Configuring environment variables and secrets in the Kubernetes deployment to pass sensitive information, such as database credentials, securely.
-
-```mermaid
-graph TD
-    A[Web Application] -->|Environment Variables|> B[MySQL Database]
-    C[MySQL Database] -->|Connection|> A
-```
-
-### Tables
-
-Here is a summary of the configuration options for the project:
-
-| Option | Type | Default Value |
-| --- | --- | --- |
-| region | string | us-central1 |
-| gke_cluster_name | string | web-app-cluster |
-| db_user | string | admin |
-| db_password | sensitive | |
-
-### Code Snippets
-
-Here is a code snippet from the `main.tf` file that shows how to set up a Google Cloud provider:
+Here are some relevant code snippets from the provided files:
 ```terraform
-provider "google" {
-  project = var.project_id
-  region  = var.region
+output "sql_instance_connection_name" {
+  value = google_sql_database_instance.mysql_instance.connection_name
 }
 ```
 
-Here is a code snippet from the `k8s/deployment.yaml` file that shows how to create a Kubernetes deployment for the web application:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -114,14 +83,35 @@ spec:
               key: password
 ```
 
-Sources:
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080
+```
 
-* [output.tf](output.tf):1-3
-* [variables.tf](variables.tf):1-5
-* [sql.tf](sql.tf):1-10
-* [main.tf](main.tf):1-5
-* [k8s/deployment.yaml](k8s/deployment.yaml):1-15
-* [k8s/service.yaml](k8s/service.yaml):1-5
+## Tables
+
+The following table summarizes the key features of the project:
+
+| Feature | Description |
+| --- | --- |
+| Cloud SQL | A MySQL 8.0 instance created using Terraform. |
+| Kubernetes Cluster | A GKE cluster created using Terraform, which deploys and manages the web application. |
+| Web Application | A deployment YAML file that defines the container image, ports, and environment variables for the web application. |
+
+## Conclusion
+
+This project provides a comprehensive overview of setting up a Cloud SQL instance and deploying a web application using Kubernetes on GKE. The project involves several key components, data flow, and logic, which are represented through code snippets, diagrams, and tables.
+
+Sources: [output.tf:1-5], [variables.tf:1-10], [sql.tf:1-15], [main.tf:1-20], [k8s/deployment.yaml:1-30], [k8s/service.yaml:1-25]
 
 _Generated by P4CodexIQ
 
@@ -129,30 +119,87 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-    A[Variables] -->|project_id| B[Project]
-    A -->|region| C[Region]
-    A -->|gke_cluster_name| D[GKE Cluster]
-    A -->|db_user| E[DB User]
-    A -->|db_password| F[DB Password]
+A[Variables] -->|project_id, region, gke_cluster_name, db_user, db_password, db_port|> B[main.tf]
+B --> C[provider "google"]
+C --> D[google_sql_database_instance "mysql_instance"]
+D --> E[settings]
+E --> F[ip_configuration]
+F --> G[private_network]
+G --> H[projects/${var.project_id}/global/networks/default]
 
-    G[K8S Deployment] --> H[Deployment]
-    I[Google SQL Database Instance] --> J[SQL Database Instance]
-    K[Google SQL User] --> L[SQL User]
-    M[Secrets] --> N[Cloudsql Proxy]
-    O[Volumes] --> P[Volumes]
+I[resource "google_sql_user" "users"] --> J[instance]
+J --> K[google_sql_database_instance "mysql_instance"]
 
-    E --> Q[MySQL User]
-    F --> R[MySQL Password]
-    H -->|app| G
-    I --> J
-    K --> L
-    N -->|credentials_file| M
-    P -->|sql-creds| O
+M[k8s/deployment.yaml] --> N[apiVersion]
+N --> O[apps/v1]
+O --> P[kind]
+P --> Q[Deployment]
+Q --> R[metadata]
+R --> S[metadata.name]
+S --> T[web-app]
 
-    B --> C
-    D -->|cluster_name| B
-    E --> Q
-    F --> R
+U[spec] --> V[replicas]
+V --> W[2]
+X[selector] --> Y[matchLabels]
+Y --> Z[app: web]
+Z --> AA[template]
+AA --> BB[metadata]
+BB --> CC[labels]
+CC --> DD[app: web]
+
+EE[containers] --> FF[name]
+FF --> G[app]
+G --> H[ports]
+H --> I[containerPort]
+I --> J[8080]
+
+K[env] --> L[name]
+L --> M=DB_HOST
+M --> N[value]
+N --> O[127.0.0.1]
+
+P[env] --> Q[name]
+Q --> R=DB_USER
+R --> S[valueFrom]
+S --> T[secretKeyRef]
+T --> U[name]
+U --> V[db-credentials]
+V --> W[key]
+W --> X[username]
+
+Y[env] --> Z[name]
+Z --> A=DB_PASSWORD
+A --> B[valueFrom]
+B --> C[secretKeyRef]
+C --> D[name]
+D --> E[db-credentials]
+E --> F[key]
+F --> G[password]
+
+H[volumes] --> I[name]
+I --> J[sql-creds]
+J --> K[mountPath]
+K --> L[/secrets]
+L --> M[readOnly]
+M --> N[true]
+
+O[k8s/service.yaml] --> P[apiVersion]
+P --> Q[v1]
+Q --> R[kind]
+R --> S[Service]
+S --> T[metadata]
+T --> U[name]
+U --> V[web-app-service]
+
+W[spec] --> X[type]
+X --> Y[LoadBalancer]
+Y --> Z[selector]
+Z --> AA[app: web]
+AA --> BB[ports]
+BB --> C[port]
+C --> D[80]
+D --> E[targetPort]
+E --> F[8080]
 ```
 
 _Generated by P4CodexIQ
