@@ -18,80 +18,112 @@ The following files were used as context for generating this readme page:
 
 <!-- Add additional relevant files if fewer than 5 were provided -->
 </details>
+
 # Project Overview
-Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
 
-### Architecture and Components
+This project is a hybrid cloud deployment that combines Google Cloud Platform (GCP) and Amazon Web Services (AWS). The overview provides an in-depth look at the architecture, components, data flow, and logic of the project.
 
-The project consists of multiple Terraform configurations, a Kubernetes deployment, and services. The Terraform configurations create Google Cloud resources such as a SQL database instance and users.
+## Introduction
+The project aims to create a scalable and secure web application using Kubernetes (K8s) on GCP. The application connects to a Cloud SQL instance for database operations. This overview will guide you through the key components and their interactions.
 
-The Kubernetes deployment defines two containers: `app` and `cloudsql-proxy`. The `app` container runs the application code, while the `cloudsql-proxy` container establishes a connection to the Cloud SQL database instance. The deployment uses a secret volume to store the Cloud SQL credentials.
+### Architecture
+
+The architecture consists of three main components:
+
+*   **Cloud SQL Instance**: A MySQL 8.0 database instance created using Terraform.
+*   **GKE Cluster**: A Google Kubernetes Engine (GKE) cluster deployed in the `us-central1` region, running a web application and a Cloud SQL proxy container.
+*   **Kubernetes Deployment and Service**: A K8s deployment managing two replicas of the web application, and a service exposing the application on port 80.
+
+### Components
+
+The project includes the following components:
+
+*   **Web Application**: A Docker image hosting the web application, running on port 8080.
+*   **Cloud SQL Proxy**: A container responsible for connecting to the Cloud SQL instance using the `cloudsql-proxy` image.
+*   **Secrets and Volumes**: Secrets and volumes are used to store sensitive data, such as database credentials and service account keys.
 
 ### Data Flow
 
-The data flow in this project involves the communication between the application containers and the Cloud SQL database instance. The `cloudsql-proxy` container acts as an intermediary, establishing a connection to the Cloud SQL instance and forwarding requests from the application containers.
+The data flow is as follows:
+
+1.  The web application connects to the Cloud SQL proxy container.
+2.  The Cloud SQL proxy container authenticates with the Cloud SQL instance using the `cloudsql-proxy` image.
+3.  The Cloud SQL instance processes database queries from the web application.
+
+### Logic
+
+The project uses Terraform for infrastructure as code (IaC) management and K8s for container orchestration. The `output.tf` file defines a connection name for the Cloud SQL instance, while the `variables.tf` file provides default values for variables such as the project ID, region, GKE cluster name, database user, and password.
 
 ### Mermaid Diagrams
+
 ```mermaid
-flowchart TD
-    A[Google Cloud] -->|Terraform Configurations| B[SQL Database Instance]
-    B -->|Cloud SQL Proxy| C[Application Containers]
+graph TD
+    A[Web Application] -->|TCP 8080|> B(Cloud SQL Proxy)
+    B -->|TCP 3306|> C(Cloud SQL Instance)
 ```
-The above diagram illustrates the high-level architecture of the project, showing how Terraform configurations create a Google Cloud resource (the SQL database instance) and how the `cloudsql-proxy` container connects to this instance.
+
+This diagram shows the communication flow between the web application, Cloud SQL proxy, and Cloud SQL instance.
 
 ### Code Snippets
 
 ```terraform
-resource "google_sql_database_instance" "mysql_instance" {
-  name             = "mysql-db"
-  database_version = "MYSQL_8_0"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-    ip_configuration {
-      private_network = "projects/${var.project_id}/global/networks/default"
-    }
-  }
+output "sql_instance_connection_name" {
+  value = google_sql_database_instance.mysql_instance.connection_name
 }
 ```
 
-This Terraform code snippet defines a Google Cloud SQL database instance.
+This code snippet defines an output for the connection name of the Cloud SQL instance.
 
-### Source Citations
-Sources: [main.tf:1-5], [variables.tf:1-3], [sql.tf:1-10]
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: app
+        image: gcr.io/YOUR_PROJECT_ID/your-app:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: 127.0.0.1
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+```
 
-Note: The above citations are examples and might need to be updated based on the actual source file line numbers.
+This code snippet defines a K8s deployment for the web application.
+
+Sources:
+
+*   [output.tf](output.tf):1-3
+*   [variables.tf](variables.tf):1-5
+*   [sql.tf](sql.tf):1-10
+*   [main.tf](main.tf):1-5
+*   [k8s/deployment.yaml](k8s/deployment.yaml):1-20
+*   [k8s/service.yaml](k8s/service.yaml):1-5
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-  A[Variables] -->|references| B[Project ID]
-  A[Variables] -->|references| C[Region]
-  A[Variables] -->|references| D[GKE Cluster Name]
-  A[Variables] -->|references| E[DB User]
-  A[Variables] -->|references| F[DB Password]
-
-  B[Project ID] -->|used in| G[Google Provider]
-  C[Region] -->|used in| G[Google Provider]
-  D[GKE Cluster Name] -->|used in| H[K8S Deployment]
-  E[DB User] -->|used in| I[K8S Deployment]
-  F[DB Password] -->|used in| J[K8S CloudSQL Proxy]
-
-  G[Google Provider] -->|provides| K[Google SQL Database Instance]
-  K[Google SQL Database Instance] -->|has setting| L[Settings]
-  L[Settings] -->|has ip configuration| M[IPIP Configuration]
-
-  H[K8S Deployment] -->|runs| N[Container App]
-  H[K8S Deployment] -->|runs| O[CloudSQL Proxy]
-  O[CloudSQL Proxy] -->|uses| P[CloudSQL Credentials]
-
-  J[K8S CloudSQL Proxy] -->|reads from| P[CloudSQL Credentials]
-
-  M[IPIP Configuration] -->|used by| K[Google SQL Database Instance]
-```
+> ⚠️ Mermaid diagram generation failed.
 
 _Generated by P4CodexIQ
