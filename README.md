@@ -7,10 +7,10 @@ The architecture of the project can be represented as follows:
 
 ```mermaid
 graph TD
-  A[Google Cloud SQL] -->|Connection|> B[Web Application]
-  C[Kubernetes] -->|Deployment|> D[Web Application]
-  E[Service Account] -->|Credential File|> F[Kubernetes]
-  G[Secrets Manager] -->|Secret Key Ref|> H[CloudSQL-Proxy]
+  A[Google Cloud SQL] -->|Connection| B[Web Application]
+  C[Kubernetes] -->|Deployment| D[Web Application]
+  E[Service Account] -->|Credential File| F[Kubernetes]
+  G[Secrets Manager] -->|Secret Key Ref| H[CloudSQL-Proxy]
 ```
 
 ### Components
