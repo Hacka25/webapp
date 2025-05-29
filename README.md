@@ -58,8 +58,8 @@ The project uses Terraform for infrastructure as code (IaC) management and K8s f
 
 ```mermaid
 graph TD
-    A[Web Application] -->|TCP 8080|> B(Cloud SQL Proxy)
-    B -->|TCP 3306|> C(Cloud SQL Instance)
+    A[Web Application] -->|TCP 8080| B(Cloud SQL Proxy)
+    B -->|TCP 3306| C(Cloud SQL Instance)
 ```
 
 This diagram shows the communication flow between the web application, Cloud SQL proxy, and Cloud SQL instance.
