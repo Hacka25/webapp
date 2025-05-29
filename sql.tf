@@ -14,6 +14,11 @@ resource "google_sql_database_instance" "mysql_instance" {
 resource "google_sql_user" "users" {
   name     = var.db_user
   instance = google_sql_database_instance.mysql_instance.name
+  password = var.user
+}
+resource "google_sql_password" "users" {
+  name     = var.db_user
+  instance = google_sql_database_instance.mysql_instance.name
   password = var.db_password
 }
 
