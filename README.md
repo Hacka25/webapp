@@ -1,86 +1,72 @@
-<details>
-<summary>Relevant source files</summary>
-
-The following files were used as context for generating this readme page:
-
-
-- [output.tf](output.tf)
-
-- [variables.tf](variables.tf)
-
-- [sql.tf](sql.tf)
-
-- [main.tf](main.tf)
-
-- [k8s/deployment.yaml](k8s/deployment.yaml)
-
-- [k8s/service.yaml](k8s/service.yaml)
-
-<!-- Add additional relevant files if fewer than 5 were provided -->
-</details>
-
 # Project Overview
 
-This project is a cloud-based infrastructure setup that utilizes Google Cloud Platform (GCP) services, including Google Kubernetes Engine (GKE), Cloud SQL, and Cloud Secrets. The primary focus is on deploying a scalable web application with a MySQL database instance.
+## Introduction
+
+The "Project Overview" project is a cloud-based infrastructure deployment that integrates Google Cloud SQL, Kubernetes, and Terraform. This project aims to provide a scalable and highly available web application environment using the mentioned technologies.
 
 ## Architecture
-The architecture consists of:
+### Google Cloud SQL
 
-### GKE Cluster
-A GKE cluster named `web-app-cluster` is created using the [k8s/deployment.yaml](k8s/deployment.yaml) file. This cluster contains two replicas of the `app` container, which runs the web application image from Google Container Registry.
+The project uses Google Cloud SQL as the database service for storing application data. A MySQL 8.0 instance is created with a private IP address and configured to use a specific region. A Cloud SQL proxy container is deployed alongside the application containers to establish a secure connection between the application and the database.
 
-### Cloud SQL
-A Cloud SQL instance named `mysql-db` is created using the [sql.tf](sql.tf) file. The instance uses a MySQL 8.0 database and is located in the `us-central1` region.
+### Kubernetes Deployment
 
-### Secret Management
-Secrets for the database credentials are stored in Kubernetes Secrets, which are mounted as volumes to the containers. These secrets include the database username (`DB_USER`) and password (`DB_PASSWORD`).
+A Kubernetes deployment named "web-app" is defined, which consists of two replicas of the same application container running on port 8080. The deployment uses environment variables to configure the application with the Cloud SQL instance details.
+
+### Terraform Configuration
+
+Terraform configuration files (main.tf) are used to create and manage the Google Cloud resources required for this project. The main.tf file defines a provider block for Google Cloud, sets up the project ID and region, and creates a Cloud SQL instance and database user.
 
 ## Detailed Sections
 
-### Deployment Configuration
-The deployment configuration is defined in [k8s/deployment.yaml](k8s/deployment.yaml). The `app` container is configured to use the Cloud SQL instance as its database connection.
+### Database Connectivity
 
-### Service Definition
-A service named `web-app-service` is defined in [k8s/service.yaml](k8s/service.yaml) to expose the web application to external traffic. The service uses a LoadBalancer type and maps port 80 to port 8080 of the container.
+The application containers use environment variables to connect to the Cloud SQL instance. The DB_HOST variable is set to 127.0.0.1, which represents the internal IP address of the Cloud SQL proxy container. The DB_USER and DB_PASSWORD variables are obtained from a Kubernetes Secret named "db-credentials".
 
-### Output and Variables
-The project uses output variables (`output.tf`) to define the Cloud SQL instance connection name, and defines several input variables (`variables.tf`) for project ID, region, GKE cluster name, database user, and password.
+### CloudSQL Proxy
 
-### Source Citations
-
-Sources:
-[output.tf:1-2], [variables.tf:1-5]
-[sql.tf:1-10]
-[k8s/deployment.yaml:1-15]
-[k8s/service.yaml:1-10]
+The cloudsql-proxy container uses the /cloud_sql_proxy command-line utility to establish a secure connection between the application containers and the Cloud SQL instance. The -instances flag specifies the Cloud SQL instance name, and the -credential_file flag points to a secret containing the service account credentials.
 
 ## Mermaid Diagrams
-Here is a sequence diagram illustrating the flow of database connections and credentials:
+```mermaid
+graph TD
+  A[Application Container] -->|env variables| B[CloudSQL Proxy]
+  B -->|secure connection| C[Cloud SQL Instance]
+  C -->|data storage| D[Database Tables]
+```
+This flowchart diagram shows the interaction between the application container, Cloud SQL proxy, and Cloud SQL instance.
+
+### Sequence Diagram
 ```mermaid
 sequenceDiagram
-    participant Cloud SQL as "Cloud SQL"
-    participant GKE Cluster as "GKE Cluster"
-    participant App Container as "App Container"
+  participant App as "Application Container"
+  participant Proxy as "CloudSQL Proxy"
+  participant DB as "Cloud SQL Instance"
 
-    note over Cloud SQL, GKE Cluster, App Container: Database Connection Flow
-    Cloud SQL->>GKE Cluster: Database connection request
-    GKE Cluster->>App Container: Database credentials (DB_USER, DB_PASSWORD)
-    App Container->>Cloud SQL: Database query
+  note over App, Proxy, DB: Initial Connection Setup
+
+  App->>Proxy: Request connection to Cloud SQL
+  Proxy->>DB: Establish secure connection to Cloud SQL
+  DB->>App: Respond with database credentials
+  note over App, Proxy, DB: Secure Connection Established
+
+  App->>DB: Send query request
+  DB->>App: Respond with query results
 ```
+This sequence diagram illustrates the steps involved in establishing a secure connection between the application container and Cloud SQL instance.
+
 ## Tables
 
-Here is a table summarizing the database instance settings:
-```markdown
-| Setting | Value |
+| Environment Variable | Description |
 | --- | --- |
-| Database Version | MYSQL_8_0 |
-| Region | us-central1 |
-| Tier | db-f1-micro |
-| Private Network | projects/<project_id>/global/networks/default |
-```
-## Code Snippets
+| DB_HOST | Internal IP address of Cloud SQL proxy container |
+| DB_USER | Username for database authentication |
+| DB_PASSWORD | Password for database authentication |
 
-Here is a code snippet from the [sql.tf](sql.tf) file:
+This table summarizes the environment variables used to configure the application container with Cloud SQL instance details.
+
+### Code Snippets
+
 ```terraform
 resource "google_sql_database_instance" "mysql_instance" {
   name             = "mysql-db"
@@ -95,8 +81,12 @@ resource "google_sql_database_instance" "mysql_instance" {
   }
 }
 ```
-Sources:
-[sql.tf:1-10]
+
+This Terraform code snippet creates a Cloud SQL instance with the specified name, database version, and region.
+
+### Source Citations
+
+Sources: [main.tf:1-10](), [sql.tf:1-5]()
 
 _Generated by P4CodexIQ
 
@@ -104,31 +94,35 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-A[Variables] -->|project_id, region, gke_cluster_name, db_user, db_password|>B[main.tf]
-B -->|provider|>C[google provider]
-C -->|region|>D[sql.tf]
-D -->|resource (mysql_instance)|>E[google_sql_database_instance]
-E -->|settings|>F[db-f1-micro tier]
-F -->|ip_configuration|>G[private_network]
-G -->|project_id|>H[variables.tf]
-H -->|default region|>I[us-central1]
-I -->|default cluster name|>J[gke_cluster_name]
+A[Provider] -->|uses| B[Google Provider]
+B -->|sets| C[Project ID]
+C -->|sets| D[Region]
+E[K8s Deployment] -->|needs| F[GCP SQL Instance]
+F -->|needs| G[Database User]
+G -->|needs| H[Database Password]
+H -->|needs| I[Secret Key Ref]
+I -->|refers to| J[Secret]
+J -->|is stored in| K[CloudSQL Proxy Vol]
+K -->|reads from| L[Service Account JSON]
+L -->|mounted at| M[/secrets]
+M -->|used by| N[CloudSQL Proxy]
+N -->|connects to| O[GCP SQL Instance]
+
+graph LR
+A[Variables] -->|set| B[Project ID]
+B -->|set| C[Region]
+C -->|set| D[GKE Cluster Name]
+D -->|set| E[DB User]
+E -->|set| F[DB Port]
+F -->|set| G[DB Password]
 
 graph TD
-A -->|output|>K[output.tf]
-K -->|sql_instance_connection_name|>L[connection_name]
+P[K8s Service] -->|uses| Q[Deployment]
+Q -->|exposes port| R[Port 8080]
+R -->|targeted by| S[Target Port 8080]
+S -->|loads balanced by| T[Load Balancer]
 
-graph TD
-M[Kubernetes] -->|deployment|>N[k8s/deployment.yaml]
-N -->|replicas, selector|>O[spec]
-O -->|template|>P[metadata]
-P -->|labels|>Q[app: web]
-Q -->|containers|>R[container 1 (app)]
-R -->|image, ports, env|>S[app container]
-
-M -->|service|>T[k8s/service.yaml]
-T -->|type, selector, ports|>U[spec]
-U -->|load balancer|>V[targetPort]
+Note: The above diagram uses three separate Mermaid graphs (TD) to represent the different relationships and flows in the codebase.
 ```
 
 _Generated by P4CodexIQ
