@@ -119,22 +119,6 @@ spec:
 
 Here is a sequence diagram that illustrates the communication flow between the web application, MySQL instance, and cloud SQL proxy:
 ```mermaid
-sequenceDiagram
-    participant Web App as "Web App"
-    participant MySQL Instance as "MySQL Instance"
-    participant Cloud SQL Proxy as "Cloud SQL Proxy"
-
-    Web App->>MySQL Instance: Query database
-    note "Web app sends query to MySQL instance"
-    MySQL Instance->>Cloud SQL Proxy: Send response
-    note "MySQL instance sends response to cloud SQL proxy"
-    Cloud SQL Proxy->>Web App: Forward response
-    note "Cloud SQL proxy forwards response to web app"
-
-    Web App->>Cloud SQL Proxy: Authenticate
-    note "Web app authenticates with cloud SQL proxy"
-    Cloud SQL Proxy->>Web App: Authenticate
-    note "Cloud SQL proxy authenticates web app"
 ```
 
 ## Tables
