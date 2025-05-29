@@ -16,9 +16,9 @@ The following diagram illustrates the architecture of the project:
 
 ```mermaid
 graph TD
-    A[Cloud SQL] -->|Database Connection|> B[Kubernetes Cluster]
-    B -->|Deployment|> C[Web Application]
-    C -->|Request/Response|> D[Service]
+    A[Cloud SQL] -->|Database Connection| B[Kubernetes Cluster]
+    B -->|Deployment| C[Web Application]
+    C -->|Request/Response| D[Service]
 ```
 
 In this architecture, the Cloud SQL instance is connected to a Kubernetes cluster, which deploys and manages the web application. The web application receives requests from the service and processes them accordingly.
