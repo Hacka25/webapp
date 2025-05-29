@@ -11,6 +11,3 @@ variable "db_user" {
 variable "db_password" {
   sensitive = true
 }
-variable "db_port" {
-  default = "3306"
-}
