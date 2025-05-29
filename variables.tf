@@ -14,3 +14,6 @@ variable "db_password" {
 variable "db_port" {
   default = 3306
 }
+variable "region" {
+  default = "us-east-1"
+}
