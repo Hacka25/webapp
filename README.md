@@ -1,95 +1,58 @@
-<details>
-<summary>Relevant source files</summary>
-
-The following files were used as context for generating this readme page:
-
-
-- [output.tf](output.tf)
-
-- [variables.tf](variables.tf)
-
-- [sql.tf](sql.tf)
-
-- [main.tf](main.tf)
-
-- [k8s/deployment.yaml](k8s/deployment.yaml)
-
-- [k8s/service.yaml](k8s/service.yaml)
-
-<!-- Add additional relevant files if fewer than 5 were provided -->
-</details>
-
 # Project Overview
-Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
+This project is a cloud-based infrastructure for deploying and managing a scalable web application. The project consists of multiple components, including Google Cloud SQL, Kubernetes, and a web application.
 
-## Introduction
+### Architecture
 
-This project overview provides an in-depth look at the architecture, components, and data flow of a cloud-based application. The project utilizes Google Cloud Platform (GCP) services, including Google Kubernetes Engine (GKE), Cloud SQL, and Secret Manager.
-
-### Architecture Overview
-
-The application consists of two main components:
-
-1.  **Web App**: A web application running on GKE, using the `gcr.io/YOUR_PROJECT_ID/your-app:latest` image.
-2.  **Cloud SQL**: A MySQL database instance, created using the `google_sql_database_instance` resource.
-
-### Database Setup
-
-The Cloud SQL instance is configured to use a private network and has a tier of `db-f1-micro`. The database user credentials are stored in Secret Manager as a secret named `cloudsql-instance-credentials`.
-
-### GKE Deployment
-
-The web app is deployed on GKE using the `Deployment` resource. The deployment consists of two replicas, each running a container with the `app` image. The containers use environment variables to connect to the Cloud SQL instance.
-
-### Service Definition
-
-A service named `web-app-service` is defined in the `k8s/service.yaml` file. This service exposes port 80 and targets port 8080 on the web app containers.
-
-**Mermaid Diagrams:**
-
-```mermaid
-sequenceDiagram
-    participant GKE as "Google Kubernetes Engine"
-    participant CloudSQL as "Cloud SQL"
-    participant SecretManager as "Secret Manager"
-
-    GKE->>CloudSQL: Connect to database
-    CloudSQL->>GKE: Authenticate with username and password
-    GKE->>SecretManager: Retrieve secret credentials
-    SecretManager->>GKE: Return secret credentials
-
-    Note over GKE, CloudSQL, SecretManager: Cloud SQL instance is created using the `google_sql_database_instance` resource.
-```
+The architecture of the project can be represented as follows:
 
 ```mermaid
 graph TD
-    A[Web App] -->|HTTP|> B[Cloud SQL]
-    C[Database User Credentials] -->|Secret|> D[Secret Manager]
-    E[GKE Deployment] -->|Deployment|> F[Containerized Web App]
-
-    Note over A, B: The web app connects to the Cloud SQL instance using environment variables.
-    Note over C, D: Database user credentials are stored in Secret Manager as a secret named `cloudsql-instance-credentials`.
-    Note over E, F: The GKE deployment consists of two replicas, each running a container with the `app` image.
+  A[Google Cloud SQL] -->|Connection|> B[Web Application]
+  C[Kubernetes] -->|Deployment|> D[Web Application]
+  E[Service Account] -->|Credential File|> F[Kubernetes]
+  G[Secrets Manager] -->|Secret Key Ref|> H[CloudSQL-Proxy]
 ```
 
-**Tables:**
+### Components
 
-| File | Type | Description |
-| --- | --- | --- |
-| output.tf | Terraform Output | Exposes the connection name for the Cloud SQL instance. |
-| variables.tf | Terraform Variables | Defines environment variables used throughout the project. |
-| sql.tf | Terraform Resource | Creates a Cloud SQL database instance and user credentials. |
-| main.tf | Terraform Provider | Configures the Google provider for GCP services. |
+The project consists of the following components:
 
-**Code Snippets:**
+* Google Cloud SQL: A managed relational database service that provides a cloud-based infrastructure for running MySQL databases.
+* Kubernetes: A container orchestration platform that automates the deployment, scaling, and management of containers.
+* Web Application: A scalable web application that uses CloudSQL as its backend database.
+* Service Account: A type of user account used to authenticate and authorize API requests.
+* Secrets Manager: A service that provides a secure way to store and manage sensitive data such as passwords.
+
+### Key Features
+
+The project includes the following key features:
+
+* Scalability: The web application can be scaled up or down based on demand using Kubernetes.
+* High Availability: CloudSQL provides high availability for the database, ensuring minimal downtime in case of failures.
+* Security: Service account and secrets manager provide secure authentication and authorization mechanisms.
+
+### Code Snippets
+
+Here are some code snippets from the project:
 
 ```terraform
+# output.tf
 output "sql_instance_connection_name" {
   value = google_sql_database_instance.mysql_instance.connection_name
 }
 ```
 
+```terraform
+# sql.tf
+resource "google_sql_user" "users" {
+  name     = var.db_user
+  instance = google_sql_database_instance.mysql_instance.name
+  password = var.db_password
+}
+```
+
 ```yaml
+# k8s/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -107,13 +70,19 @@ spec:
       containers:
       - name: app
         image: gcr.io/YOUR_PROJECT_ID/your-app:latest
+        ports:
+        - containerPort: 8080
 ```
 
-**Source Citations:**
+### Source Citations
 
-Sources: [output.tf:1-2], [variables.tf:1-5], [sql.tf:1-10], [main.tf:1-3], [k8s/deployment.yaml:1-15], [k8s/service.yaml:1-5]
+Sources:
 
-Remember to replace `YOUR_PROJECT_ID` with the actual ID of your Google Cloud Project.
+* [output.tf](output.tf):1-2
+* [sql.tf](sql.tf):3-5,7-9
+* [main.tf](main.tf):4-6
+* [k8s/deployment.yaml](k8s/deployment.yaml):10-15
+* [k8s/service.yaml](k8s/service.yaml):1-5
 
 _Generated by P4CodexIQ
 
