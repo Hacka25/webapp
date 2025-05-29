@@ -1,53 +1,44 @@
 # Project Overview
 
-The project is a comprehensive overview of the infrastructure and architecture implemented in the provided source files. This document aims to provide a detailed understanding of the components, data flow, and logic involved in the project.
+The project overview provides a high-level summary of the project, including its purpose, scope, and key components. The following sections will delve deeper into the architecture, data flow, and configuration elements relevant to the project.
 
-## Introduction
+### Architecture Overview
 
-This project involves setting up a Google Cloud SQL instance and deploying a web application using Kubernetes (K8s) on Google Container Engine (GKE). The project utilizes Terraform configuration files (`output.tf`, `variables.tf`, `sql.tf`, and `main.tf`) to create and manage the infrastructure, along with deployment and service YAML files (`k8s/deployment.yaml` and `k8s/service.yaml`) to deploy and configure the web application.
+The project consists of several interconnected components:
 
-### Cloud SQL
+* **Cloud SQL**: A cloud-based relational database service that provides MySQL 8.0 instances.
+* **Google Kubernetes Engine (GKE)**: A managed environment for deploying containerized applications.
+* **Deployment**: A GKE deployment that runs two replicas of the application, with each replica consisting of a web application container and a CloudSQL proxy container.
 
-The project sets up a MySQL 8.0 instance on Google Cloud SQL using the `google_sql_database_instance` resource. The instance is created with a private network configuration, allowing for secure communication between the database and other services.
+### Deployment Configuration
 
-## Architecture
-
-The following diagram illustrates the architecture of the project:
-
-```mermaid
-graph TD
-    A[Cloud SQL] -->|Database Connection|> B[Kubernetes Cluster]
-    B -->|Deployment|> C[Web Application]
-    C -->|Request/Response|> D[Service]
-```
-
-In this architecture, the Cloud SQL instance is connected to a Kubernetes cluster, which deploys and manages the web application. The web application receives requests from the service and processes them accordingly.
-
-### Key Components
-
-The project involves several key components:
-
-*   **Cloud SQL**: A MySQL 8.0 instance created using Terraform.
-*   **Kubernetes Cluster**: A GKE cluster created using Terraform, which deploys and manages the web application.
-*   **Web Application**: A deployment YAML file that defines the container image, ports, and environment variables for the web application.
+The deployment configuration is defined in [k8s/deployment.yaml](k8s/deployment.yaml). The deployment uses the `apps/v1` API version and defines a selector to match labels on the pods. The template specifies two containers: one for the web application and another for the CloudSQL proxy.
 
 ### Data Flow
 
-The data flow in this project involves:
+Data flows from the CloudSQL database instance to the web application container, which is responsible for retrieving data and serving it to clients. The CloudSQL proxy container establishes connections to the CloudSQL instance and forwards requests to the web application container.
 
-*   The Cloud SQL instance stores data for the web application.
-*   The web application receives requests from the service and processes them accordingly.
-*   The processed data is stored in the database.
+### Configuration Elements
 
-## Code Snippets
+The project uses several configuration elements:
 
-Here are some relevant code snippets from the provided files:
-```terraform
-output "sql_instance_connection_name" {
-  value = google_sql_database_instance.mysql_instance.connection_name
-}
+* **Variables**: Declared in [variables.tf](variables.tf), these variables include project ID, region, GKE cluster name, DB user, and DB password.
+* **CloudSQL settings**: Configured in [sql.tf](sql.tf) to create a MySQL 8.0 instance with a specific tier and IP configuration.
+
+### Mermaid Diagrams
+
+Here is a high-level diagram showing the architecture:
+```mermaid
+graph TD
+    A[CloudSQL] -->|connection_name|> B[Deployment]
+    C[Web App Container] -->|request|> D[CloudSQL Proxy]
+    E[CloudSQL Instance] -->|data|> F[Web App]
 ```
+Note: The diagram above is a simplified representation of the architecture and does not include all the components or data flows.
 
+### Code Snippets
+
+Here is a code snippet from [k8s/deployment.yaml](k8s/deployment.yaml) showing the deployment configuration:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -81,42 +72,61 @@ spec:
             secretKeyRef:
               name: db-credentials
               key: password
+
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.33.0
+        command: ["/cloud_sql_proxy",
+                  "-instances=PROJECT_ID:REGION:mysql-db=tcp:3306",
+                  "-credential_file=/secrets/service_account.json"]
+        volumeMounts:
+        - name: sql-creds
+          mountPath: /secrets
+          readOnly: true
+
+      volumes:
+      - name: sql-creds
+        secret:
+          secretName: cloudsql-instance-credentials
 ```
+Sources:
 
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: web-app-service
-spec:
-  type: LoadBalancer
-  selector:
-    app: web
-  ports:
-    - port: 80
-      targetPort: 8080
-```
-
-## Tables
-
-The following table summarizes the key features of the project:
-
-| Feature | Description |
-| --- | --- |
-| Cloud SQL | A MySQL 8.0 instance created using Terraform. |
-| Kubernetes Cluster | A GKE cluster created using Terraform, which deploys and manages the web application. |
-| Web Application | A deployment YAML file that defines the container image, ports, and environment variables for the web application. |
-
-## Conclusion
-
-This project provides a comprehensive overview of setting up a Cloud SQL instance and deploying a web application using Kubernetes on GKE. The project involves several key components, data flow, and logic, which are represented through code snippets, diagrams, and tables.
-
-Sources: [output.tf:1-5], [variables.tf:1-10], [sql.tf:1-15], [main.tf:1-20], [k8s/deployment.yaml:1-30], [k8s/service.yaml:1-25]
+* [output.tf](output.tf):1-5
+* [variables.tf](variables.tf):1-10
+* [sql.tf](sql.tf):1-15
+* [k8s/deployment.yaml](k8s/deployment.yaml):1-25
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-> ⚠️ Mermaid diagram generation failed.
+```mermaid
+graph TD
+A[Variables] -->|project_id|> B[Google Provider]
+A -->|region|> B
+A -->|gke_cluster_name|> C[Kubernetes Cluster]
+A -->|db_user|> D[Cloud SQL User]
+A -->|db_password|> E[Cloud SQL Password]
+
+B -->|region|> F[SQL Database Instance]
+F -->|name|> G[MySQL DB]
+G -->|database_version|> H[Database Version]
+
+I[Kubernetes Deployment] -->|app|> J[Container]
+J -->|image|> K[Image]
+K -->|ports|> L[Port]
+L -->|containerPort|> M[Container Port]
+
+O[Kubernetes Service] -->|selector|> P[Selector]
+P -->|app|> Q[App Label]
+Q -->|name|> R[Service Name]
+R -->|type|> S[Service Type]
+S -->|ports|> T[Port]
+T -->|port|> U[Port Number]
+U -->|targetPort|> V[Target Port]
+
+W[Cloud SQL User] -->|instance|> X[Cloud SQL Instance]
+X -->|name|> Y[Instance Name]
+Y -->|connection_name|> Z[Connection Name]
+```
 
 _Generated by P4CodexIQ
