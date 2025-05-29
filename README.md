@@ -1,45 +1,71 @@
 # Project Overview
 
-The project overview provides a high-level summary of the project, including its purpose, scope, and key components. The following sections will delve deeper into the architecture, data flow, and configuration elements relevant to the project.
+The "Project Overview" document provides a comprehensive summary of the project's purpose, scope, and high-level overview. This document will cover the architecture, components, data flow, and logic relevant to the project.
 
-### Architecture Overview
+## Introduction
 
-The project consists of several interconnected components:
+This project aims to deploy a scalable web application on Google Kubernetes Engine (GKE) with a MySQL database instance using Cloud SQL. The project also utilizes a cloud SQL proxy to connect to the MySQL instance from within the GKE cluster. This document will provide an overview of the project's architecture, components, and logic.
 
-* **Cloud SQL**: A cloud-based relational database service that provides MySQL 8.0 instances.
-* **Google Kubernetes Engine (GKE)**: A managed environment for deploying containerized applications.
-* **Deployment**: A GKE deployment that runs two replicas of the application, with each replica consisting of a web application container and a CloudSQL proxy container.
+## Architecture
 
-### Deployment Configuration
+The project consists of the following key components:
 
-The deployment configuration is defined in [k8s/deployment.yaml](k8s/deployment.yaml). The deployment uses the `apps/v1` API version and defines a selector to match labels on the pods. The template specifies two containers: one for the web application and another for the CloudSQL proxy.
+*   A GKE cluster with two replicas of a web application container
+*   A MySQL database instance using Cloud SQL
+*   A cloud SQL proxy to connect to the MySQL instance from within the GKE cluster
 
-### Data Flow
+### GKE Cluster
 
-Data flows from the CloudSQL database instance to the web application container, which is responsible for retrieving data and serving it to clients. The CloudSQL proxy container establishes connections to the CloudSQL instance and forwards requests to the web application container.
+The GKE cluster is responsible for hosting the web application. It consists of two replicas of the web application container, which ensures high availability and scalability.
 
-### Configuration Elements
+### MySQL Database Instance
 
-The project uses several configuration elements:
+The MySQL database instance is used to store data for the web application. The instance is created using Cloud SQL and is configured with a private IP address.
 
-* **Variables**: Declared in [variables.tf](variables.tf), these variables include project ID, region, GKE cluster name, DB user, and DB password.
-* **CloudSQL settings**: Configured in [sql.tf](sql.tf) to create a MySQL 8.0 instance with a specific tier and IP configuration.
+### Cloud SQL Proxy
 
-### Mermaid Diagrams
+The cloud SQL proxy is used to connect to the MySQL instance from within the GKE cluster. It allows the web application containers to access the MySQL instance securely.
 
-Here is a high-level diagram showing the architecture:
-```mermaid
-graph TD
-    A[CloudSQL] -->|connection_name|> B[Deployment]
-    C[Web App Container] -->|request|> D[CloudSQL Proxy]
-    E[CloudSQL Instance] -->|data|> F[Web App]
-```
-Note: The diagram above is a simplified representation of the architecture and does not include all the components or data flows.
+## Logic
+
+The project logic can be broken down into the following key components:
+
+*   Creating a GKE cluster with two replicas of the web application container
+*   Creating a MySQL database instance using Cloud SQL
+*   Configuring the cloud SQL proxy to connect to the MySQL instance from within the GKE cluster
 
 ### Code Snippets
 
-Here is a code snippet from [k8s/deployment.yaml](k8s/deployment.yaml) showing the deployment configuration:
-```yaml
+Here are some code snippets that demonstrate the project's logic:
+```
+# main.tf
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+
+resource "google_sql_database_instance" "mysql_instance" {
+  name             = "mysql-db"
+  database_version = "MYSQL_8_0"
+  region           = var.region
+
+  settings {
+    tier = "db-f1-micro"
+    ip_configuration {
+      private_network = "projects/${var.project_id}/global/networks/default"
+    }
+  }
+}
+
+resource "google_sql_user" "users" {
+  name     = var.db_user
+  instance = google_sql_database_instance.mysql_instance.name
+  password = var.db_password
+}
+```
+
+```
+# k8s/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -88,45 +114,45 @@ spec:
         secret:
           secretName: cloudsql-instance-credentials
 ```
-Sources:
 
-* [output.tf](output.tf):1-5
-* [variables.tf](variables.tf):1-10
-* [sql.tf](sql.tf):1-15
-* [k8s/deployment.yaml](k8s/deployment.yaml):1-25
+## Mermaid Diagrams
+
+Here is a sequence diagram that illustrates the communication flow between the web application, MySQL instance, and cloud SQL proxy:
+```mermaid
+sequenceDiagram
+    participant Web App as "Web App"
+    participant MySQL Instance as "MySQL Instance"
+    participant Cloud SQL Proxy as "Cloud SQL Proxy"
+
+    Web App->>MySQL Instance: Query database
+    note "Web app sends query to MySQL instance"
+    MySQL Instance->>Cloud SQL Proxy: Send response
+    note "MySQL instance sends response to cloud SQL proxy"
+    Cloud SQL Proxy->>Web App: Forward response
+    note "Cloud SQL proxy forwards response to web app"
+
+    Web App->>Cloud SQL Proxy: Authenticate
+    note "Web app authenticates with cloud SQL proxy"
+    Cloud SQL Proxy->>Web App: Authenticate
+    note "Cloud SQL proxy authenticates web app"
+```
+
+## Tables
+
+Here is a table that summarizes the key features of the project:
+
+| Feature | Description |
+| --- | --- |
+| GKE Cluster | Hosts two replicas of the web application container for scalability and high availability |
+| MySQL Database Instance | Used to store data for the web application, created using Cloud SQL |
+| Cloud SQL Proxy | Connects to the MySQL instance from within the GKE cluster, allowing secure access |
+
+Sources: [output.tf:1-2], [variables.tf:1-5], [sql.tf:1-4], [main.tf:1-3], [k8s/deployment.yaml:1-20], [k8s/service.yaml:1-6]
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-A[Variables] -->|project_id|> B[Google Provider]
-A -->|region|> B
-A -->|gke_cluster_name|> C[Kubernetes Cluster]
-A -->|db_user|> D[Cloud SQL User]
-A -->|db_password|> E[Cloud SQL Password]
-
-B -->|region|> F[SQL Database Instance]
-F -->|name|> G[MySQL DB]
-G -->|database_version|> H[Database Version]
-
-I[Kubernetes Deployment] -->|app|> J[Container]
-J -->|image|> K[Image]
-K -->|ports|> L[Port]
-L -->|containerPort|> M[Container Port]
-
-O[Kubernetes Service] -->|selector|> P[Selector]
-P -->|app|> Q[App Label]
-Q -->|name|> R[Service Name]
-R -->|type|> S[Service Type]
-S -->|ports|> T[Port]
-T -->|port|> U[Port Number]
-U -->|targetPort|> V[Target Port]
-
-W[Cloud SQL User] -->|instance|> X[Cloud SQL Instance]
-X -->|name|> Y[Instance Name]
-Y -->|connection_name|> Z[Connection Name]
-```
+> ⚠️ Mermaid diagram generation failed.
 
 _Generated by P4CodexIQ
