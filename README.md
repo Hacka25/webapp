@@ -1,71 +1,95 @@
-# Project Overview
+<details>
+<summary>Relevant source files</summary>
 
-The "Project Overview" document provides a comprehensive summary of the project's purpose, scope, and high-level overview. This document will cover the architecture, components, data flow, and logic relevant to the project.
+The following files were used as context for generating this readme page:
+
+
+- [output.tf](output.tf)
+
+- [variables.tf](variables.tf)
+
+- [sql.tf](sql.tf)
+
+- [main.tf](main.tf)
+
+- [k8s/deployment.yaml](k8s/deployment.yaml)
+
+- [k8s/service.yaml](k8s/service.yaml)
+
+<!-- Add additional relevant files if fewer than 5 were provided -->
+</details>
+
+# Project Overview
+Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
 
 ## Introduction
 
-This project aims to deploy a scalable web application on Google Kubernetes Engine (GKE) with a MySQL database instance using Cloud SQL. The project also utilizes a cloud SQL proxy to connect to the MySQL instance from within the GKE cluster. This document will provide an overview of the project's architecture, components, and logic.
+This project overview provides an in-depth look at the architecture, components, and data flow of a cloud-based application. The project utilizes Google Cloud Platform (GCP) services, including Google Kubernetes Engine (GKE), Cloud SQL, and Secret Manager.
 
-## Architecture
+### Architecture Overview
 
-The project consists of the following key components:
+The application consists of two main components:
 
-*   A GKE cluster with two replicas of a web application container
-*   A MySQL database instance using Cloud SQL
-*   A cloud SQL proxy to connect to the MySQL instance from within the GKE cluster
+1.  **Web App**: A web application running on GKE, using the `gcr.io/YOUR_PROJECT_ID/your-app:latest` image.
+2.  **Cloud SQL**: A MySQL database instance, created using the `google_sql_database_instance` resource.
 
-### GKE Cluster
+### Database Setup
 
-The GKE cluster is responsible for hosting the web application. It consists of two replicas of the web application container, which ensures high availability and scalability.
+The Cloud SQL instance is configured to use a private network and has a tier of `db-f1-micro`. The database user credentials are stored in Secret Manager as a secret named `cloudsql-instance-credentials`.
 
-### MySQL Database Instance
+### GKE Deployment
 
-The MySQL database instance is used to store data for the web application. The instance is created using Cloud SQL and is configured with a private IP address.
+The web app is deployed on GKE using the `Deployment` resource. The deployment consists of two replicas, each running a container with the `app` image. The containers use environment variables to connect to the Cloud SQL instance.
 
-### Cloud SQL Proxy
+### Service Definition
 
-The cloud SQL proxy is used to connect to the MySQL instance from within the GKE cluster. It allows the web application containers to access the MySQL instance securely.
+A service named `web-app-service` is defined in the `k8s/service.yaml` file. This service exposes port 80 and targets port 8080 on the web app containers.
 
-## Logic
+**Mermaid Diagrams:**
 
-The project logic can be broken down into the following key components:
+```mermaid
+sequenceDiagram
+    participant GKE as "Google Kubernetes Engine"
+    participant CloudSQL as "Cloud SQL"
+    participant SecretManager as "Secret Manager"
 
-*   Creating a GKE cluster with two replicas of the web application container
-*   Creating a MySQL database instance using Cloud SQL
-*   Configuring the cloud SQL proxy to connect to the MySQL instance from within the GKE cluster
+    GKE->>CloudSQL: Connect to database
+    CloudSQL->>GKE: Authenticate with username and password
+    GKE->>SecretManager: Retrieve secret credentials
+    SecretManager->>GKE: Return secret credentials
 
-### Code Snippets
-
-Here are some code snippets that demonstrate the project's logic:
-```
-# main.tf
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-
-resource "google_sql_database_instance" "mysql_instance" {
-  name             = "mysql-db"
-  database_version = "MYSQL_8_0"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-    ip_configuration {
-      private_network = "projects/${var.project_id}/global/networks/default"
-    }
-  }
-}
-
-resource "google_sql_user" "users" {
-  name     = var.db_user
-  instance = google_sql_database_instance.mysql_instance.name
-  password = var.db_password
-}
+    Note over GKE, CloudSQL, SecretManager: Cloud SQL instance is created using the `google_sql_database_instance` resource.
 ```
 
+```mermaid
+graph TD
+    A[Web App] -->|HTTP|> B[Cloud SQL]
+    C[Database User Credentials] -->|Secret|> D[Secret Manager]
+    E[GKE Deployment] -->|Deployment|> F[Containerized Web App]
+
+    Note over A, B: The web app connects to the Cloud SQL instance using environment variables.
+    Note over C, D: Database user credentials are stored in Secret Manager as a secret named `cloudsql-instance-credentials`.
+    Note over E, F: The GKE deployment consists of two replicas, each running a container with the `app` image.
 ```
-# k8s/deployment.yaml
+
+**Tables:**
+
+| File | Type | Description |
+| --- | --- | --- |
+| output.tf | Terraform Output | Exposes the connection name for the Cloud SQL instance. |
+| variables.tf | Terraform Variables | Defines environment variables used throughout the project. |
+| sql.tf | Terraform Resource | Creates a Cloud SQL database instance and user credentials. |
+| main.tf | Terraform Provider | Configures the Google provider for GCP services. |
+
+**Code Snippets:**
+
+```terraform
+output "sql_instance_connection_name" {
+  value = google_sql_database_instance.mysql_instance.connection_name
+}
+```
+
+```yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -83,59 +107,18 @@ spec:
       containers:
       - name: app
         image: gcr.io/YOUR_PROJECT_ID/your-app:latest
-        ports:
-        - containerPort: 8080
-        env:
-        - name: DB_HOST
-          value: 127.0.0.1
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: username
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
-
-      - name: cloudsql-proxy
-        image: gcr.io/cloudsql-docker/gce-proxy:1.33.0
-        command: ["/cloud_sql_proxy",
-                  "-instances=PROJECT_ID:REGION:mysql-db=tcp:3306",
-                  "-credential_file=/secrets/service_account.json"]
-        volumeMounts:
-        - name: sql-creds
-          mountPath: /secrets
-          readOnly: true
-
-      volumes:
-      - name: sql-creds
-        secret:
-          secretName: cloudsql-instance-credentials
 ```
 
-## Mermaid Diagrams
+**Source Citations:**
 
-Here is a sequence diagram that illustrates the communication flow between the web application, MySQL instance, and cloud SQL proxy:
-```mermaid
-```
+Sources: [output.tf:1-2], [variables.tf:1-5], [sql.tf:1-10], [main.tf:1-3], [k8s/deployment.yaml:1-15], [k8s/service.yaml:1-5]
 
-## Tables
-
-Here is a table that summarizes the key features of the project:
-
-| Feature | Description |
-| --- | --- |
-| GKE Cluster | Hosts two replicas of the web application container for scalability and high availability |
-| MySQL Database Instance | Used to store data for the web application, created using Cloud SQL |
-| Cloud SQL Proxy | Connects to the MySQL instance from within the GKE cluster, allowing secure access |
-
-Sources: [output.tf:1-2], [variables.tf:1-5], [sql.tf:1-4], [main.tf:1-3], [k8s/deployment.yaml:1-20], [k8s/service.yaml:1-6]
+Remember to replace `YOUR_PROJECT_ID` with the actual ID of your Google Cloud Project.
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
+> ⚠️ Mermaid diagram generation failed.
 
 _Generated by P4CodexIQ
