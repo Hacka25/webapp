@@ -1,29 +1,82 @@
 # Project Overview
-This project is a comprehensive overview of the architecture, components, and data flow within the provided source files. The main objective is to explain how different components interact with each other to achieve specific tasks.
+
+The "Project Overview" aims to provide a comprehensive and accurate summary of the project's architecture, components, data flow, and logic based on the provided source files. This document will be structured in a logical manner for easy understanding by other developers.
 
 ### Introduction
 
-The project consists of multiple Terraform modules (output.tf, variables.tf, sql.tf, gke.tf) and Kubernetes configuration files (k8s/deployment.yaml, k8s/service.yaml). These files work together to create a GKE cluster with a MySQL database instance, deploy two applications (web-app and frontend), and configure services for load balancing.
+The project is a cloud-based web application that utilizes Google Kubernetes Engine (GKE) and Cloud SQL to provide a scalable and reliable infrastructure. The application consists of multiple components, including frontend and backend services, which are deployed using Kubernetes deployments and services. The database instance is managed by Cloud SQL, and the application connects to it using a cloud SQL proxy.
 
-### Architecture
+### GKE Cluster
 
-The architecture can be divided into three main components:
+The project uses a GKE cluster named `web-app-cluster` in the `us-central1` region. The cluster is created with one node pool, which has two nodes. The remove_default_node_pool variable is set to true, which removes the default node pool after creating the primary node pool.
 
-*   **GKE Cluster**: The project creates a GKE cluster using Terraform (gke.tf). This cluster is used to run containers.
-*   **MySQL Database Instance**: A MySQL database instance is created using Terraform (sql.tf) and integrated with the GKE cluster. The database instance is used by both applications.
-*   **Applications**: Two Kubernetes deployments (k8s/deployment.yaml and k8s/backend-deployment.yaml) are used to deploy the web-app and frontend applications, respectively. These applications communicate with each other using services.
+### Cloud SQL Instance
+
+The project uses a Cloud SQL instance named `mysql-db` in the `MYSQL_8_0` database version. The instance is created with a tier of `db-f1-micro` and has a private network set to `projects/${var.project_id}/global/networks/default`. A user named `admin` is created with a password stored as a secret.
+
+### Frontend Deployment
+
+The frontend deployment consists of two replicas running the `gcr.io/YOUR_PROJECT_ID/frontend:latest` image. The containers expose port 80 and use environment variables to connect to the database.
+
+### Backend Deployment
+
+The backend deployment consists of two replicas running the `gcr.io/YOUR_PROJECT_ID/backend:latest` image. The containers expose port 8080 and use environment variables to connect to the database.
+
+### Services
+
+The project uses multiple services, including:
+
+* `web-app-service`: a LoadBalancer service that exposes port 80
+* `backend-service`: a ClusterIP service that exposes port 8080
+* `frontend-service`: a LoadBalancer service that exposes port 80
+* `sql-creds`: a secret service that stores the cloud SQL instance credentials
 
 ### Data Flow
 
-The data flow in this project can be summarized as follows:
+The data flow in this project is as follows:
 
-1.  The web-app and frontend applications send requests to the MySQL database instance.
-2.  The MySQL database instance processes these requests and returns results to the applications.
-3.  The applications use these results to generate HTML responses, which are then served by their respective services.
+* The frontend containers send requests to the backend containers
+* The backend containers connect to the Cloud SQL instance using a cloud SQL proxy
+* The Cloud SQL instance stores and retrieves data for the application
+
+```mermaid
+sequenceDiagram
+  participant Frontend as "Frontend"
+  participant Backend as "Backend"
+  participant CloudSQL as "Cloud SQL Instance"
+  participant Proxy as "Cloud SQL Proxy"
+
+  note over Frontend, Backend: "Request from frontend to backend"
+  Frontend->>Backend: request
+  note over Backend, CloudSQL: "Request from backend to cloud sql instance"
+  Backend->>Proxy: request
+  Proxy->>CloudSQL: request
+  note over CloudSQL: "Data retrieval and processing"
+  CloudSQL->>Proxy: response
+  Proxy->>Backend: response
+  note over Backend: "Response to frontend"
+  Backend->>Frontend: response
+```
+
+### Tables
+
+| Component | Description |
+| --- | --- |
+| GKE Cluster | The cloud-based Kubernetes cluster used for deploying the application |
+| Cloud SQL Instance | The managed database instance used for storing and retrieving data |
+| Frontend Deployment | The deployment that runs the frontend containers |
+| Backend Deployment | The deployment that runs the backend containers |
+| Services | The LoadBalancer services that expose ports 80 and 8080 |
 
 ### Code Snippets
 
-Here is a code snippet from k8s/deployment.yaml:
+```python
+provider "google" {
+  project = var.project_id
+  region  = var.region
+}
+```
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -45,82 +98,39 @@ spec:
         ports:
         - containerPort: 8080
 ```
-This code snippet defines a Kubernetes deployment for the web-app.
 
-Sources: [k8s/deployment.yaml:1-10]()
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+  ports:
+  - port: 80
+    targetPort: 8080
+```
+
+Sources:
+
+* [output.tf](output.tf): `Sources: output.tf:1-10`
+* [variables.tf](variables.tf): `Sources: variables.tf:1-5`
+* [sql.tf](sql.tf): `Sources: sql.tf:1-15`
+* [main.tf](main.tf): `Sources: main.tf:1-5`
+* [gke.tf](gke.tf): `Sources: gke.tf:1-10`
+* [k8s/deployment.yaml](k8s/deployment.yaml): `Sources: k8s/deployment.yaml:1-20`
+* [k8s/service.yaml](k8s/service.yaml): `Sources: k8s/service.yaml:1-5`
+* [k8s/backend-service.yaml](k8s/backend-service.yaml): `Sources: k8s/backend-service.yaml:1-5`
+* [k8s/frontend-deployment.yaml](k8s/frontend-deployment.yaml): `Sources: k8s/frontend-deployment.yaml:1-10`
+* [k8s/backend-deployment.yaml](k8s/backend-deployment.yaml): `Sources: k8s/backend-deployment.yaml:1-15`
+* [k8s/frontend-service.yaml](k8s/frontend-service.yaml): `Sources: k8s/frontend-service.yaml:1-5`
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-  A[Cloud SQL] --> |instance_name|=>
-  B[Google Container Cluster]
-  C[Kubernetes Deployment] --> |replicas|=>
-  D[Kubernetes Service] --> |selector|=>
-  E[Frontend Deployment] --> |containers|=>
-  F[Backend Deployment] --> |containers|=>
-  G[Cloud SQL Proxy] --> |command|=>
-
-  A --> |connection_name|=>
-  B --> |cluster_name|=>
-  C --> |service_name|=>
-  D --> |port|=>
-  E --> |image|=>
-  F --> |image|=>
-  G --> |instances|=>
-
-  classDef node fill:#f9f,stroke:#333,stroke-width:4px;
-  class A,B,C,D,E,F,G,node; 
-
-  node1[Variables]
-  node2[Output]
-  node3[SQL Instance]
-  node4[Google Container Cluster]
-  node5[Kubernetes Deployment]
-  node6[Service]
-
-  node1 --> |project_id|=>
-  node1 --> |region|=>
-  node1 --> |gke_cluster_name|=>
-  node1 --> |db_user|=>
-  node1 --> |db_password|=>
-  node1 --> |db_port|=>
-
-  node2 --> |gke_cluster_name|=>
-  node2 --> |sql_instance_connection_name|=>
-
-  node3 --> |name|=>
-  node3 --> |database_version|=>
-  node3 --> |region|=>
-  
-  node4 --> |name|=>
-  node4 --> |location|=>
-  node5 --> |replicas|=>
-  node6 --> |type|=>
-
-  node1 --> >node2
-  node1 --> >node3
-  node3 --> >node4
-  node4 --> >node5
-  node5 --> >node6
-
-  note "Variables and Outputs"
-  note left of node1 " Define variables"
-  note right of node2 " Output values"
-
-  note "Cloud SQL Instance"
-  note top of node3 "Define MySQL instance"
-
-  note "Google Container Cluster"
-  note above node4 "Create container cluster"
-
-  note "Kubernetes Deployment"
-  note below node5 "Deploy applications"
-  
-  note "Service"
-  note above node6 "Exposes services"
-```
+> ⚠️ Mermaid diagram generation failed.
 
 _Generated by P4CodexIQ
