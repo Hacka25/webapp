@@ -1,89 +1,53 @@
-Here is the generated README file based on the provided source files:
-
 # Project Overview
+This project is a comprehensive overview of the architecture, components, and data flow within the provided source files. The main objective is to explain how different components interact with each other to achieve specific tasks.
 
-**Introduction**
-This project overview aims to provide a comprehensive understanding of the underlying architecture, components, and data flow within the project. The project comprises multiple Google Kubernetes Engine (GKE) clusters, a Cloud SQL instance, and various Kubernetes deployments and services.
+### Introduction
+
+The project consists of multiple Terraform modules (output.tf, variables.tf, sql.tf, gke.tf) and Kubernetes configuration files (k8s/deployment.yaml, k8s/service.yaml). These files work together to create a GKE cluster with a MySQL database instance, deploy two applications (web-app and frontend), and configure services for load balancing.
 
 ### Architecture
 
-The project is divided into three main tiers: frontend, backend, and database. The frontend tier consists of two GKE clusters, each hosting a separate deployment. The backend tier also hosts two deployments, one for the web application and another for cloudsql-proxy. The database tier utilizes a Cloud SQL instance to store data.
+The architecture can be divided into three main components:
 
-#### Frontend Tier
-The frontend tier is responsible for handling incoming requests from users. It consists of two GKE clusters, each with its own deployment:
+*   **GKE Cluster**: The project creates a GKE cluster using Terraform (gke.tf). This cluster is used to run containers.
+*   **MySQL Database Instance**: A MySQL database instance is created using Terraform (sql.tf) and integrated with the GKE cluster. The database instance is used by both applications.
+*   **Applications**: Two Kubernetes deployments (k8s/deployment.yaml and k8s/backend-deployment.yaml) are used to deploy the web-app and frontend applications, respectively. These applications communicate with each other using services.
 
-* `web-app`: A deployment that runs a custom web application.
-* `frontend`: A deployment that serves static content.
+### Data Flow
 
-Both deployments use the same image and port configuration. They are differentiated by their labels (`app: web` vs. `tier: frontend`).
+The data flow in this project can be summarized as follows:
 
-#### Backend Tier
-The backend tier is responsible for processing requests from the frontend tier. It consists of two GKE clusters, each with its own deployment:
-
-* `backend`: A deployment that runs a custom backend application.
-* `cloudsql-proxy`: A deployment that acts as a proxy between the backend and Cloud SQL instances.
-
-Both deployments use the same image and port configuration. They are differentiated by their labels (`app: backend` vs. `tier: backend`).
-
-#### Database Tier
-The database tier utilizes a single Cloud SQL instance to store data. It is accessed by both frontend and backend deployments using the cloudsql-proxy deployment.
-
-### Mermaid Diagrams
-
-Here is a flowchart illustrating the architecture:
-
-```mermaid
-graph TD
-    A[Frontend] -->|HTTP| B[Backend]
-    C[CloudSQL] -->|MySQL| D[Backend]
-    E[LoadBalancer] -->|HTTP| F[Frontend]
-```
-
-### Tables
-
-Here is a table summarizing the GKE clusters:
-
-| Cluster | Location |
-| --- | --- |
-| web-app-cluster | us-central1 |
-| frontend-cluster | us-central1 |
-
-And here is a table summarizing the Cloud SQL instance:
-
-| Instance | Database Version | Region |
-| --- | --- | --- |
-| mysql-db | MYSQL_8_0 | us-central1 |
+1.  The web-app and frontend applications send requests to the MySQL database instance.
+2.  The MySQL database instance processes these requests and returns results to the applications.
+3.  The applications use these results to generate HTML responses, which are then served by their respective services.
 
 ### Code Snippets
 
-Here is an example of a GKE cluster definition in Terraform:
-```terraform
-resource "google_container_cluster" "primary" {
-  name     = var.gke_cluster_name
-  location = var.region
-
-  remove_default_node_pool = true
-  initial_node_count       = 1
-}
+Here is a code snippet from k8s/deployment.yaml:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: app
+        image: gcr.io/YOUR_PROJECT_ID/your-app:latest
+        ports:
+        - containerPort: 8080
 ```
+This code snippet defines a Kubernetes deployment for the web-app.
 
-### Source Citations
-
-Sources:
-
-* [output.tf](output.tf):[1-2]
-* [variables.tf](variables.tf):[3-5]
-* [sql.tf](sql.tf):[6-7]
-* [main.tf](main.tf):[8-9]
-* [gke.tf](gke.tf):[10-11]
-* [k8s/deployment.yaml](k8s/deployment.yaml):[12-14]
-* [k8s/service.yaml](k8s/service.yaml):[15-16]
-* [k8s/backend-service.yaml](k8s/backend-service.yaml):[17-18]
-* [k8s/frontend-deployment.yaml](k8s/frontend-deployment.yaml):[19-20]
-* [k8s/backend-deployment.yaml](k8s/backend-deployment.yaml):[21-22]
-* [k8s/frontend-service.yaml](k8s/frontend-service.yaml):[23-24]
-
-Note: The line numbers refer to the specific lines within each source file where the information was derived.
+Sources: [k8s/deployment.yaml:1-10]()
 
 _Generated by P4CodexIQ
 
@@ -91,15 +55,72 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-    A[Project ID] --> |var project_id| B[Variables]
-    B --> |variable gke_cluster_name| C[GKE Cluster]
-    B --> |variable region| D[Region]
-    E[Google Cloud SQL Database Instance] --> F[Database Settings]
-    F --> G[DB User, DB Password, DB Port]
-    H[Kubernetes Deployment] --> I[Container Image]
-    J[Service] --> K[Port 80]
-    L[GKE Cluster] --> M[Node Pool]
-    N[Cloud SQL Proxy] --> O[Secrets]
+  A[Cloud SQL] --> |instance_name|=>
+  B[Google Container Cluster]
+  C[Kubernetes Deployment] --> |replicas|=>
+  D[Kubernetes Service] --> |selector|=>
+  E[Frontend Deployment] --> |containers|=>
+  F[Backend Deployment] --> |containers|=>
+  G[Cloud SQL Proxy] --> |command|=>
+
+  A --> |connection_name|=>
+  B --> |cluster_name|=>
+  C --> |service_name|=>
+  D --> |port|=>
+  E --> |image|=>
+  F --> |image|=>
+  G --> |instances|=>
+
+  classDef node fill:#f9f,stroke:#333,stroke-width:4px;
+  class A,B,C,D,E,F,G,node; 
+
+  node1[Variables]
+  node2[Output]
+  node3[SQL Instance]
+  node4[Google Container Cluster]
+  node5[Kubernetes Deployment]
+  node6[Service]
+
+  node1 --> |project_id|=>
+  node1 --> |region|=>
+  node1 --> |gke_cluster_name|=>
+  node1 --> |db_user|=>
+  node1 --> |db_password|=>
+  node1 --> |db_port|=>
+
+  node2 --> |gke_cluster_name|=>
+  node2 --> |sql_instance_connection_name|=>
+
+  node3 --> |name|=>
+  node3 --> |database_version|=>
+  node3 --> |region|=>
+  
+  node4 --> |name|=>
+  node4 --> |location|=>
+  node5 --> |replicas|=>
+  node6 --> |type|=>
+
+  node1 --> >node2
+  node1 --> >node3
+  node3 --> >node4
+  node4 --> >node5
+  node5 --> >node6
+
+  note "Variables and Outputs"
+  note left of node1 " Define variables"
+  note right of node2 " Output values"
+
+  note "Cloud SQL Instance"
+  note top of node3 "Define MySQL instance"
+
+  note "Google Container Cluster"
+  note above node4 "Create container cluster"
+
+  note "Kubernetes Deployment"
+  note below node5 "Deploy applications"
+  
+  note "Service"
+  note above node6 "Exposes services"
 ```
 
 _Generated by P4CodexIQ
