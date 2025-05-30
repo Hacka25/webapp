@@ -15,7 +15,7 @@ The data flow within this architecture is as follows:
 graph TD
   A[Client] --> B[Frontend Service]
   C[Backend Service] --> D[CloudSQL Proxy]
-  E[Cloud SQL Instance] <-- F[CloudSQL Proxy]
+  E[Cloud SQL Instance] --> F[CloudSQL Proxy]
   G[Backend Deployment] --> H[CloudSQL Proxy]
 ```
 1. The client sends requests to the frontend service (Sources: [k8s/service.yaml:3-7](), [k8s/frontend-deployment.yaml:6-10](), and [k8s/backend-service.yaml:6-9]()).
