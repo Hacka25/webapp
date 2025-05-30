@@ -12,5 +12,5 @@ variable "db_password" {
   sensitive = true
 }
 variable "db_port" {
-  sensitive = false
+  sensitive = true
 }
