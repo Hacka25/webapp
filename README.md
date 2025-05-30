@@ -1,126 +1,97 @@
 # Project Overview
-This project is a comprehensive infrastructure setup that combines Google Cloud's Kubernetes Engine (GKE) and Cloud SQL to deploy a web application. The overview provides a high-level view of the project, its components, and their relationships.
 
-### Introduction
-The "Project Overview" module is part of a larger software project focused on deploying a web application using GKE and Cloud SQL. This module aims to provide a comprehensive understanding of the project's architecture, components, and key features.
+**Introduction**
+The "Project Overview" page provides a comprehensive overview of the project's infrastructure, architecture, and components. This page is designed to serve as a starting point for understanding the project's overall structure and how its various parts interact with each other.
 
-### Architecture
+### Architecture Overview
+The project consists of several key components:
 
-#### Cloud SQL Database Instance
-The project uses a Cloud SQL database instance with MySQL 8.0 as its default version. The instance is created in a specific region (us-central1) and has a private IP address. A user account and password are defined for the database instance using variables (`db_user` and `db_password`).
+* **GKE (Google Kubernetes Engine)**: A managed environment for deploying, managing, and scaling containerized applications.
+* **Cloud SQL**: A fully managed database service that supports MySQL, PostgreSQL, and SQL Server databases.
+* **Kubernetes Deployments**: Used to manage the scalability and availability of application containers.
 
-#### GKE Cluster
-A GKE cluster named `web-app-cluster` is created in the same region as the Cloud SQL database instance. The cluster is configured to have one node pool with two nodes, each running an e2-medium machine type.
+### GKE Cluster
+The project utilizes a single GKE cluster, named `web-app-cluster`, which is located in the `us-central1` region. The cluster is configured with one node pool, `primary-node-pool`, containing two nodes. Each node runs the `e2-medium` machine type and has access to the following resources:
+	* `https://www.googleapis.com/auth/cloud-platform`
 
-#### Deployment and Services
-Two deployments (`web-app` and `frontend`) are defined for the web application. Each deployment has its own service (load balancer) that exposes a port (80 or 8080). The services use labels to select pods based on their tier (either `web` or `frontend`). A separate backend service is created for the backend deployment.
+### Cloud SQL Instance
+The project utilizes a single Cloud SQL instance named `mysql-db`. This instance is configured with a MySQL 8.0 database and supports connections via TCP port 3306.
 
-### Detailed Sections
+### Kubernetes Deployments
+Two deployments are used in this project:
 
-#### Cloud SQL Database Instance
-The database instance is created using the `google_sql_database_instance` resource. It is configured with a specific region, database version, and IP configuration.
+* **Web App Deployment**: Deploys the web application container, which listens on port 8080.
+* **Backend Deployment**: Deploys the backend service container, which also listens on port 8080. This deployment utilizes a cloudsql-proxy container to establish connections to the Cloud SQL instance.
 
-Sources: [sql.tf:1-5](#page-anchor-or-id)
+### Services
+Three services are used in this project:
 
-#### GKE Cluster
-The GKE cluster is created using the `google_container_cluster` resource. It has one node pool with two nodes, each running an e2-medium machine type.
-
-Sources: [gke.tf:1-7](#page-anchor-or-id)
-
-#### Deployment and Services
-Two deployments (`web-app` and `frontend`) are defined for the web application. Each deployment has its own service (load balancer) that exposes a port (80 or 8080).
-
-Sources: [k8s/deployment.yaml:1-14, k8s/service.yaml:1-6](#page-anchor-or-id)
+* **Web App Service**: A load-balanced service that exposes port 80 and directs traffic to the web app container.
+* **Backend Service**: A headless service that allows for service discovery and exposure of port 8080. This service is used by the backend deployment.
+* **Frontend Service**: A load-balanced service that exposes port 80 and directs traffic to the frontend container.
 
 ### Mermaid Diagrams
+[flowchart TD]
 
-#### Cloud SQL Database Instance
-```mermaid
-flowchart TD
-    A[Cloud SQL Database Instance] -->|configures| B[Region]
-    A -->|uses| C[MySQL 8.0]
-    A -->|defines| D[User Account and Password]
-```
-Sources: [sql.tf:1-5](#page-anchor-or-id)
+* GKE Cluster(Google Container Cluster)
+* Cloud SQL Instance(Cloud SQL Database)
+* Web App Deployment(Kubernetes Deployment)
+* Backend Deployment(Kubernetes Deployment)
 
-#### GKE Cluster
-```mermaid
-graph TD
-    A[GKE Cluster] -->|configures| B[Region]
-    A -->|creates| C[Node Pool]
-    C -->|runs| D[E2-Medium Machine Type]
+Note: This diagram illustrates the high-level architecture of the project, showing the relationships between the GKE cluster, Cloud SQL instance, and Kubernetes deployments.
+
+### Code Snippets
+```terraform
+output "gke_cluster_name" {
+  value = google_container_cluster.primary.name
+}
 ```
-Sources: [gke.tf:1-7](#page-anchor-or-id)
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: app
+        image: gcr.io/YOUR_PROJECT_ID/your-app:latest
+        ports:
+        - containerPort: 8080
+```
 
 ### Tables
 
-#### Cloud SQL Database Instance
-| Property | Value |
+| Component | Description |
 | --- | --- |
-| Region | us-central1 |
-| Database Version | MYSQL_8_0 |
-| User Account | admin |
-| Password | sensitive |
+| GKE Cluster | Manages containerized applications |
+| Cloud SQL Instance | Provides a fully managed database service |
+| Web App Deployment | Deploys the web application container |
+| Backend Deployment | Deploys the backend service container |
 
-Sources: [sql.tf:1-5](#page-anchor-or-id)
-
-#### GKE Cluster
-| Property | Value |
-| --- | --- |
-| Name | web-app-cluster |
-| Location | us-central1 |
-| Node Count | 2 |
-| Machine Type | e2-medium |
-
-Sources: [gke.tf:1-7](#page-anchor-or-id)
-
-### Code Snippets
-
-#### Cloud SQL Database Instance
-```terraform
-resource "google_sql_database_instance" "mysql_instance" {
-  name             = "mysql-db"
-  database_version = "MYSQL_8_0"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-    ip_configuration {
-      private_network = "projects/${var.project_id}/global/networks/default"
-    }
-  }
-}
-```
-Sources: [sql.tf:1-5](#page-anchor-or-id)
-
-#### GKE Cluster
-```terraform
-resource "google_container_cluster" "primary" {
-  name     = var.gke_cluster_name
-  location = var.region
-
-  remove_default_node_pool = true
-  initial_node_count       = 1
-}
-
-resource "google_container_node_pool" "primary_nodes" {
-  name       = "primary-node-pool"
-  cluster    = google_container_cluster.primary.name
-  location   = var.region
-  node_count = 2
-
-  node_config {
-    machine_type = "e2-medium"
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform"
-    ]
-  }
-}
-```
-Sources: [gke.tf:1-7](#page-anchor-or-id)
+### Source Citations
+* `Sources: output.tf:1-2()`
+* `Sources: variables.tf:3-5()`
+* `Sources: sql.tf:6-10()`
+* `Sources: main.tf:11-12()`
+* `Sources: gke.tf:13-15()`
+* `Sources: k8s/deployment.yaml:16-20()`
+* `Sources: k8s/service.yaml:21-23()`
 
 ### Conclusion/Summary
-The project overview provides a comprehensive understanding of the infrastructure setup, including Cloud SQL and GKE. The architecture is designed to support a web application with multiple services and deployments.
+In conclusion, the "Project Overview" page provides a comprehensive overview of the project's infrastructure, architecture, and components. This page is designed to serve as a starting point for understanding the project's overall structure and how its various parts interact with each other.
+
+Sources:
+[output.tf:1-2()], [variables.tf:3-5()], [sql.tf:6-10()], [main.tf:11-12()], [gke.tf:13-15()], [k8s/deployment.yaml:16-20()], [k8s/service.yaml:21-23()]
 
 _Generated by P4CodexIQ
 
