@@ -11,7 +11,7 @@ The following document provides an overview of the system architecture for [Proj
 ### Diagram Overview
 ```mermaid
 graph TD
-    A[Google Cloud Build] --> B[Kubernetes (GKE)]
+    A[Google Cloud Build] --> B[Kubernetes GKE]
     C[Google SQL Database] --> D[Google Cloud Storage]
 ```
 
