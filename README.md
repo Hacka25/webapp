@@ -3,77 +3,67 @@
 
 The following files were used as context for generating this readme page:
 
-
 - [output.tf](output.tf)
-
 - [variables.tf](variables.tf)
-
 - [sql.tf](sql.tf)
-
 - [main.tf](main.tf)
-
 - [k8s/deployment.yaml](k8s/deployment.yaml)
-
 - [k8s/service.yaml](k8s/service.yaml)
 
 <!-- Add additional relevant files if fewer than 5 were provided -->
 </details>
 
 # Project Overview
-Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
 
 ## Introduction
 
-This project is an infrastructure deployment for a web application using Google Cloud Platform (GCP), Kubernetes, and cloud services. The project aims to create a scalable and secure environment for hosting a web application with a MySQL database instance.
+This project is focused on deploying a web application that uses Cloud SQL to interact with a MySQL database. The project consists of Terraform configuration files, Kubernetes deployment and service definitions.
 
-The provided files include Terraform configuration files (`output.tf`, `variables.tf`, `sql.tf`, `main.tf`) for provisioning GCP resources, such as a MySQL database instance, and Kubernetes deployment (`k8s/deployment.yaml`) and service (`k8s/service.yaml`) configurations for deploying the web application.
+The following sections will provide an overview of the project's architecture, components, and data flow, as well as highlight key features and configurations.
 
 ## Architecture
 
-The architecture consists of:
+### Cloud SQL Instance
+The project utilizes Google Cloud SQL to create a MySQL instance with a database named "mysql-db". The instance is configured to use the "MYSQL_8_0" version and is located in the specified region.
 
-### Infrastructure Setup
+### Kubernetes Deployment
+A Kubernetes deployment is used to manage the web application. The deployment consists of two containers: one for the web application itself, and another for the Cloud SQL proxy. The Cloud SQL proxy container is responsible for connecting to the Cloud SQL instance and forwarding requests from the web application.
 
-*   A Google Cloud SQL instance with a MySQL database named `mysql-db`
-*   A GKE (Google Kubernetes Engine) cluster named `web-app-cluster` in the `us-central1` region
-*   A cloudsql-proxy container in the deployment to connect to the MySQL database instance from within the cluster
+### Service Definition
+A Kubernetes service is defined to expose the web application to incoming traffic. The service is configured as a LoadBalancer, which allows it to be accessed from outside the cluster.
 
-### Web Application Deployment
+## Components
 
-*   A web application deployment with two replicas, using the `gcr.io/YOUR_PROJECT_ID/your-app:latest` image and exposing port 8080
-*   The deployment sets environment variables for the web application:
-	+ `DB_HOST`: set to `127.0.0.1`
-	+ `DB_USER` and `DB_PASSWORD`: retrieved from a Kubernetes secret named `db-credentials`
+### Variables
+The project uses Terraform variables to store configuration values such as the project ID, region, GKE cluster name, DB user, and password. These variables are used throughout the project's configuration files.
+
+### SQL Configuration
+The `sql.tf` file contains the configuration for the Cloud SQL instance. This includes setting the database version, region, and IP configuration.
+
+### Deployment Configuration
+The `deployment.yaml` file defines the Kubernetes deployment for the web application. This includes specifying the containers, ports, and environment variables.
 
 ### Service Configuration
+The `service.yaml` file defines the Kubernetes service for the web application. This includes configuring the service type (LoadBalancer) and port mapping.
 
-*   A service named `web-app-service` that exposes port 80 and targets port 8080 in the deployment
-*   The service is configured as a LoadBalancer, allowing incoming traffic to be routed to the web application
+## Data Flow
 
-### Database Access
-
-*   The cloudsql-proxy container is used to connect to the MySQL database instance from within the cluster
-*   The proxy uses a credential file named `service_account.json` to authenticate with the database instance
-
-[Mermaid Diagram: architecture diagram]
-
+Here is a Mermaid diagram illustrating the data flow:
 ```mermaid
-graph TD
-  A[Google Cloud SQL] -->|CloudSQL Proxy|> B[MySQL Database Instance]
-  C[GKE Cluster] -->|Deployment|> D[Web Application]
-  E[Kubernetes Service] -->|LoadBalancer|> F[Ingress]
+sequenceDiagram
+    participant Cloud SQL Proxy as "Cloud SQL Proxy"
+    participant Web Application as "Web App"
+    participant Database as "Database"
+
+    Cloud SQL Proxy->>Web App: Forward request to database
+    Web App->>Cloud SQL Proxy: Send query to database
+    Cloud SQL Proxy->>Database: Send query to database
+    Database->>Cloud SQL Proxy: Return results
+    Cloud SQL Proxy->>Web App: Forward results back to web app
 ```
+## Code Snippets
 
-### Code Snippets
-
-Here are some relevant code snippets:
-
-```terraform
-output "sql_instance_connection_name" {
-  value = google_sql_database_instance.mysql_instance.connection_name
-}
-```
-
+Here is a code snippet from the `deployment.yaml` file:
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -107,36 +97,37 @@ spec:
             secretKeyRef:
               name: db-credentials
               key: password
-```
 
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.33.0
+        command: ["/cloud_sql_proxy",
+                  "-instances=PROJECT_ID:REGION:mysql-db=tcp:3306",
+                  "-credential_file=/secrets/service_account.json"]
+        volumeMounts:
+        - name: sql-creds
+          mountPath: /secrets
+          readOnly: true
+
+      volumes:
+      - name: sql-creds
+        secret:
+          secretName: cloudsql-instance-credentials
+```
 Sources:
 
-*   [output.tf](output.tf):1-5
-*   [variables.tf](variables.tf):1-14
-*   [sql.tf](sql.tf):1-15
-*   [main.tf](main.tf):1-13
-*   [k8s/deployment.yaml](k8s/deployment.yaml)
-*   [k8s/service.yaml](k8s/service.yaml)
+* [output.tf](output.tf): `1-2`, `3-5`
+* [variables.tf](variables.tf): `1-10`
+* [sql.tf](sql.tf): `1-15`
+* [main.tf](main.tf): `1-20`
+* [k8s/deployment.yaml](k8s/deployment.yaml): `1-30`
+* [k8s/service.yaml](k8s/service.yaml): `1-25`
+
+Note: The above code snippets are not actual working codes, they're just examples.
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-    A[Project] -->|owns| B[Google Cloud]
-    C[Kubernetes] -->|uses| D[GKE Cluster]
-    E[Cloud SQL] -->|connected to| F[Database Instance]
-    G[Deployment] -->|runs on| H[Kubernetes Pod]
-    I[Service] -->|exposes port 80| J[Load Balancer]
-
-    A -->|uses| K[AWS Provider]
-    A -->|uses| L[Azure Provider]
-    C -->|uses| M[GCP Provider]
-
-    F -->|communicates with| G
-    H -->|environment variables set by| I
-    J -->|routes traffic to| H
-```
+> ⚠️ Mermaid diagram generation failed.
 
 _Generated by P4CodexIQ
