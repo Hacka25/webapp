@@ -1,76 +1,100 @@
 # Project Overview
-### Introduction
-This project overview provides a comprehensive understanding of the infrastructure and architecture used in this cloud-native application. The project involves creating a scalable, secure, and highly available web application using Google Cloud Platform (GCP) services.
+The project is a cloud-based web application that utilizes Google Cloud Platform (GCP) services, including Google Kubernetes Engine (GKE), Cloud SQL, and Cloud Storage. The application consists of frontend and backend components, which are deployed on GKE clusters and communicate with a Cloud SQL database instance.
 
-The following files were used as context for generating this readme page:
-- [output.tf](output.tf)
-- [variables.tf](variables.tf)
-- [sql.tf](sql.tf)
-- [main.tf](main.tf)
-- [gke.tf](gke.tf)
-- [k8s/deployment.yaml](k8s/deployment.yaml)
-- [k8s/service.yaml](k8s/service.yaml)
-- [k8s/backend-service.yaml](k8s/backend-service.yaml)
-- [k8s/frontend-deployment.yaml](k8s/frontend-deployment.yaml)
-- [k8s/backend-deployment.yaml](k8s/backend-deployment.yaml)
-- [k8s/frontend-service.yaml](k8s/frontend-service.yaml)
+## Architecture
 
-### Architecture
-The application architecture is based on a microservices design, with multiple services communicating with each other using RESTful APIs. The services are deployed to separate Kubernetes (K8S) clusters:
+### High-Level Overview
+The project's architecture can be visualized as follows:
+```mermaid
+graph TD
+    Frontend[Frontend] -->|http|> LoadBalancer[Load Balancer]
+    LoadBalancer -->|http|> GKECluster[GKE Cluster]
+    GKECluster -->|tcp|> CloudSQL[Cloud SQL Database Instance]
+    CloudSQL -->|tcp|> MySQL[MySQL Database]
+```
+Sources: [main.tf:1-10](), [gke.tf:1-20](), [sql.tf:1-15]()
 
-* **Frontend**: Handles user requests and serves as the entry point for users.
-* **Backend**: Handles business logic and interacts with databases.
-* **Cloud SQL Proxy**: Enables secure communication between the application and Cloud SQL instances.
+### Frontend Component
+The frontend component is a web application that runs on a GKE cluster. It exposes an HTTP endpoint and communicates with the backend component using RESTful APIs.
 
-### Data Flow
-Data flows from the frontend to the backend, which then communicates with Cloud SQL instances. The application uses environment variables and secrets to manage sensitive information such as database credentials.
-
-### Mermaid Diagrams
-
-Sequence Diagram: [sequenceDiagram]
 ```mermaid
 sequenceDiagram
     participant Frontend as "Frontend"
     participant Backend as "Backend"
-    participant CloudSQLProxy as "CloudSQL Proxy"
-    participant MySQLInstance as "MySQL Instance"
-
-    Frontend->>Backend: User Request
-    Backend->>CloudSQLProxy: Database Query
-    CloudSQLProxy->>MySQLInstance: Connection Request
-    MySQLInstance-->>CloudSQLProxy: Data Response
-    CloudSQLProxy->>Backend: Data Response
-    Backend->>Frontend: Data Response
+    Frontend->>Backend: GET /api/data
+    Backend->>Frontend: 200 OK
 ```
+Sources: [k8s/frontend-deployment.yaml:1-15](), [k8s/frontend-service.yaml:1-10]()
 
-### Tables
+### Backend Component
+The backend component is a RESTful API that runs on a separate GKE cluster. It communicates with the frontend component using HTTP and interacts with the Cloud SQL database instance using TCP.
 
-| Service | Description |
+```mermaid
+sequenceDiagram
+    participant Backend as "Backend"
+    participant CloudSQL as "Cloud SQL Database Instance"
+    Backend->>CloudSQL: SELECT * FROM table
+    CloudSQL->>Backend: 200 OK
+```
+Sources: [k8s/backend-deployment.yaml:1-20](), [k8s/backend-service.yaml:1-10]()
+
+### Cloud SQL Database Instance
+The Cloud SQL database instance is a MySQL database that runs on GCP. It stores data for the web application and interacts with the backend component using TCP.
+
+```mermaid
+graph TD
+    CloudSQL[Cloud SQL Database Instance]
+    CloudSQL -->|tcp|> MySQL[MySQL Database]
+```
+Sources: [sql.tf:1-15]()
+
+## Configuration
+
+### GKE Cluster Configuration
+The GKE cluster is configured using Terraform, with a default node count of 2 and a machine type of `e2-medium`.
+
+| Parameter | Value |
 | --- | --- |
-| Frontend | Handles user requests and serves as the entry point for users. |
-| Backend | Handles business logic and interacts with databases. |
-| Cloud SQL Proxy | Enables secure communication between the application and Cloud SQL instances. |
+| Node Count | 2 |
+| Machine Type | e2-medium |
 
-### Code Snippets
+Sources: [gke.tf:5-10]()
+
+### Cloud SQL Database Instance Configuration
+The Cloud SQL database instance is configured using Terraform, with a default database version of `MYSQL_8_0` and a tier of `db-f1-micro`.
+
+| Parameter | Value |
+| --- | --- |
+| Database Version | MYSQL_8_0 |
+| Tier | db-f1-micro |
+
+Sources: [sql.tf:5-10]()
+
+### Environment Variables
+The application uses environment variables to configure database connections.
+
+| Variable | Value |
+| --- | --- |
+| DB_HOST | 127.0.0.1 |
+| DB_USER | ${db_user} |
+| DB_PASSWORD | ${db_password} |
+
+Sources: [k8s/deployment.yaml:10-15](), [k8s/backend-deployment.yaml:10-15]()
+
+## Code Snippets
+
+### Terraform Configuration
+The project uses Terraform to configure GCP resources, including the GKE cluster and Cloud SQL database instance.
 ```terraform
-output "gke_cluster_name" {
-  value = google_container_cluster.primary.name
-}
-
-resource "google_sql_database_instance" "mysql_instance" {
-  name             = "mysql-db"
-  database_version = "MYSQL_8_0"
-  region           = var.region
-
-  settings {
-    tier = "db-f1-micro"
-    ip_configuration {
-      private_network = "projects/${var.project_id}/global/networks/default"
-    }
-  }
+provider "google" {
+  project = var.project_id
+  region  = var.region
 }
 ```
+Sources: [main.tf:1-5]()
 
+### Kubernetes Deployment YAML
+The frontend and backend components are deployed using Kubernetes deployment YAML files.
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -81,31 +105,8 @@ spec:
   selector:
     matchLabels:
       app: web
-  template:
-    metadata:
-      labels:
-        app: web
-    spec:
-      containers:
-      - name: app
-        image: gcr.io/YOUR_PROJECT_ID/your-app:latest
-        ports:
-        - containerPort: 8080
 ```
-
-### Source Citations
-
-Sources:
-- [output.tf](output.tf):1-2
-- [variables.tf](variables.tf):1-5
-- [sql.tf](sql.tf):1-10
-- [main.tf](main.tf):1-5
-- [gke.tf](gke.tf):1-15
-- [k8s/deployment.yaml](k8s/deployment.yaml):1-20
-- [k8s/service.yaml](k8s/service.yaml):1-10
-
-### Technical Accuracy
-All information in this project overview is derived solely from the provided source files.
+Sources: [k8s/deployment.yaml:1-10](), [k8s/frontend-deployment.yaml:1-10](), [k8s/backend-deployment.yaml:1-10]()
 
 _Generated by P4CodexIQ
 
