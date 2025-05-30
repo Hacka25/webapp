@@ -6,7 +6,7 @@ variable "gke_cluster_name" {
   default = "web-app-cluster"
 }
 variable "db_user" {
-  default = "admin"
+  default = "dadmin"
 }
 variable "db_password" {
   sensitive = true
