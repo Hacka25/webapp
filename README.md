@@ -1,53 +1,126 @@
 # Project Overview
+This project is a comprehensive infrastructure setup that combines Google Cloud's Kubernetes Engine (GKE) and Cloud SQL to deploy a web application. The overview provides a high-level view of the project, its components, and their relationships.
 
-The project overview provides a high-level summary of the architecture, components, and data flow within the project. The following sections will delve into the details of the project.
-
-## Introduction
-
-The project is designed to deploy a web application using Google Kubernetes Engine (GKE) and Cloud SQL. The application consists of a frontend and backend, with the frontend serving static content and the backend handling database queries. The project also includes a cloudsql-proxy container for managing connections to the Cloud SQL instance.
+### Introduction
+The "Project Overview" module is part of a larger software project focused on deploying a web application using GKE and Cloud SQL. This module aims to provide a comprehensive understanding of the project's architecture, components, and key features.
 
 ### Architecture
 
-The architecture of the project can be visualized as follows:
+#### Cloud SQL Database Instance
+The project uses a Cloud SQL database instance with MySQL 8.0 as its default version. The instance is created in a specific region (us-central1) and has a private IP address. A user account and password are defined for the database instance using variables (`db_user` and `db_password`).
 
+#### GKE Cluster
+A GKE cluster named `web-app-cluster` is created in the same region as the Cloud SQL database instance. The cluster is configured to have one node pool with two nodes, each running an e2-medium machine type.
+
+#### Deployment and Services
+Two deployments (`web-app` and `frontend`) are defined for the web application. Each deployment has its own service (load balancer) that exposes a port (80 or 8080). The services use labels to select pods based on their tier (either `web` or `frontend`). A separate backend service is created for the backend deployment.
+
+### Detailed Sections
+
+#### Cloud SQL Database Instance
+The database instance is created using the `google_sql_database_instance` resource. It is configured with a specific region, database version, and IP configuration.
+
+Sources: [sql.tf:1-5](#page-anchor-or-id)
+
+#### GKE Cluster
+The GKE cluster is created using the `google_container_cluster` resource. It has one node pool with two nodes, each running an e2-medium machine type.
+
+Sources: [gke.tf:1-7](#page-anchor-or-id)
+
+#### Deployment and Services
+Two deployments (`web-app` and `frontend`) are defined for the web application. Each deployment has its own service (load balancer) that exposes a port (80 or 8080).
+
+Sources: [k8s/deployment.yaml:1-14, k8s/service.yaml:1-6](#page-anchor-or-id)
+
+### Mermaid Diagrams
+
+#### Cloud SQL Database Instance
+```mermaid
+flowchart TD
+    A[Cloud SQL Database Instance] -->|configures| B[Region]
+    A -->|uses| C[MySQL 8.0]
+    A -->|defines| D[User Account and Password]
+```
+Sources: [sql.tf:1-5](#page-anchor-or-id)
+
+#### GKE Cluster
 ```mermaid
 graph TD
-  A[Frontend] -->| HTTP | B[Backend]
-  B -->| TCP | C[Cloud SQL]
-  D[Google Kubernetes Engine (GKE)] -->| Deployment | E[Container]
+    A[GKE Cluster] -->|configures| B[Region]
+    A -->|creates| C[Node Pool]
+    C -->|runs| D[E2-Medium Machine Type]
 ```
+Sources: [gke.tf:1-7](#page-anchor-or-id)
 
-In this architecture, the frontend and backend are deployed as containers in GKE. The frontend serves static content over HTTP, while the backend handles database queries using Cloud SQL.
+### Tables
 
-### Components
+#### Cloud SQL Database Instance
+| Property | Value |
+| --- | --- |
+| Region | us-central1 |
+| Database Version | MYSQL_8_0 |
+| User Account | admin |
+| Password | sensitive |
 
-The project consists of several key components:
+Sources: [sql.tf:1-5](#page-anchor-or-id)
 
-* **Frontend**: A container that serves static content.
-* **Backend**: A container that handles database queries using Cloud SQL.
-* **Cloudsql-proxy**: A container that manages connections to the Cloud SQL instance.
-* **GKE**: The Google Kubernetes Engine platform for deploying and managing containers.
+#### GKE Cluster
+| Property | Value |
+| --- | --- |
+| Name | web-app-cluster |
+| Location | us-central1 |
+| Node Count | 2 |
+| Machine Type | e2-medium |
 
-### Data Flow
+Sources: [gke.tf:1-7](#page-anchor-or-id)
 
-The data flow within the project can be summarized as follows:
+### Code Snippets
 
-1. Requests are sent from clients to the frontend container over HTTP.
-2. The frontend container serves static content to the client.
-3. The backend container receives requests from the frontend and handles database queries using Cloud SQL.
-4. The cloudsql-proxy container manages connections to the Cloud SQL instance.
+#### Cloud SQL Database Instance
+```terraform
+resource "google_sql_database_instance" "mysql_instance" {
+  name             = "mysql-db"
+  database_version = "MYSQL_8_0"
+  region           = var.region
 
-### Technical Details
+  settings {
+    tier = "db-f1-micro"
+    ip_configuration {
+      private_network = "projects/${var.project_id}/global/networks/default"
+    }
+  }
+}
+```
+Sources: [sql.tf:1-5](#page-anchor-or-id)
 
-The project uses several technical components, including:
+#### GKE Cluster
+```terraform
+resource "google_container_cluster" "primary" {
+  name     = var.gke_cluster_name
+  location = var.region
 
-* **Terraform**: A infrastructure-as-code tool for managing GKE and Cloud SQL resources.
-* **Kubernetes**: An orchestration platform for deploying and managing containers in GKE.
-* **Cloud SQL**: A fully managed relational database service provided by Google Cloud.
+  remove_default_node_pool = true
+  initial_node_count       = 1
+}
 
-### Conclusion
+resource "google_container_node_pool" "primary_nodes" {
+  name       = "primary-node-pool"
+  cluster    = google_container_cluster.primary.name
+  location   = var.region
+  node_count = 2
 
-In conclusion, the project is designed to deploy a web application using GKE and Cloud SQL. The architecture consists of a frontend and backend, with the frontend serving static content and the backend handling database queries. The project uses several technical components, including Terraform, Kubernetes, and Cloud SQL.
+  node_config {
+    machine_type = "e2-medium"
+    oauth_scopes = [
+      "https://www.googleapis.com/auth/cloud-platform"
+    ]
+  }
+}
+```
+Sources: [gke.tf:1-7](#page-anchor-or-id)
+
+### Conclusion/Summary
+The project overview provides a comprehensive understanding of the infrastructure setup, including Cloud SQL and GKE. The architecture is designed to support a web application with multiple services and deployments.
 
 _Generated by P4CodexIQ
 
