@@ -1,117 +1,87 @@
 # Project Overview
-The project is a cloud-based web application that utilizes Google Cloud Platform (GCP) services, including Google Kubernetes Engine (GKE), Cloud SQL, and Cloud Storage. The application consists of frontend and backend components, which are deployed on GKE clusters and communicate with a Cloud SQL database instance.
 
-## Architecture
+Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
 
-### High-Level Overview
-The project's architecture can be visualized as follows:
+1. **Introduction:** This project is a simple web application deployed on Google Kubernetes Engine (GKE). The main components include a frontend, backend, and a MySQL database instance. The codebase contains Terraform configuration files for creating the GKE cluster, deploying the applications, and setting up the MySQL database instance.
+
+2. **Architecture:**
+   - **Frontend**: The frontend is deployed as two replicas using a Deployment in Kubernetes (deployment.yaml). It uses an image hosted on Google Container Registry (GCR) with port 80 open for access. To connect to the MySQL database, it reads the credentials from a Kubernetes secret named `db-credentials`.
+   - **Backend**: Similar to the frontend, the backend is deployed as two replicas using another Deployment in Kubernetes (backend-deployment.yaml). It also uses an image hosted on GCR with port 8080 open for communication and requires access to the MySQL database through environment variables DB_HOST, DB_USER, and DB_PASSWORD.
+   - **Database**: The MySQL database instance is created using Terraform (sql.tf) with a default configuration and connection settings. The credentials for the database are not provided here but can be found in `cloudsql-instance-credentials` Kubernetes secret.
+   - **GKE Cluster**: A GKE cluster named `web-app-cluster` is created using Terraform (gke.tf). It consists of 1 initial node and an additional node pool with 2 nodes, each having the e2-medium machine type.
+
+3. **Flow Diagram**
 ```mermaid
-graph TD
-    Frontend[Frontend] -->|http|> LoadBalancer[Load Balancer]
-    LoadBalancer -->|http|> GKECluster[GKE Cluster]
-    GKECluster -->|tcp|> CloudSQL[Cloud SQL Database Instance]
-    CloudSQL -->|tcp|> MySQL[MySQL Database]
+flowchart TD
+    subgraph Frontend
+        A[Frontend Deployment] -->|Connects to| B[GKE Cluster]
+        B -->|Exposes port 80| C[LoadBalancer (Service)]
+    end
+    subgraph Backend
+        D[Backend Deployment] -->|Connects to| E[GKE Cluster]
+        E -->|Exposes port 8080| F[ClusterIP Service (backend-service.yaml)]
+        F -->|Accesses MySQL Database| G[MySQL Instance]
+    end
+    subgraph Database
+        H[MySQL Instance]
+    end
 ```
-Sources: [main.tf:1-10](), [gke.tf:1-20](), [sql.tf:1-15]()
+   - **Notes:**
+     * The arrow types `-->` represent synchronous communication and `-x` represents failed connections.
+     * Activation boxes (+) indicate that there are multiple deployments of the same type (e.g., frontend).
 
-### Frontend Component
-The frontend component is a web application that runs on a GKE cluster. It exposes an HTTP endpoint and communicates with the backend component using RESTful APIs.
+4. **Database Configuration**
 
-```mermaid
-sequenceDiagram
-    participant Frontend as "Frontend"
-    participant Backend as "Backend"
-    Frontend->>Backend: GET /api/data
-    Backend->>Frontend: 200 OK
-```
-Sources: [k8s/frontend-deployment.yaml:1-15](), [k8s/frontend-service.yaml:1-10]()
+| Name | Type/Value                  | Description                                               | Sources: sql.tf:13-25 |
+|------|-----------------------------|-----------------------------------------------------------|-----------------------|
+| Name | mysql-db                    | MySQL Database Instance name                              |                       |
+| DB   | MYSQL_8_0                    | MySQL Database Version                                     |                       |
+| Region | us-central1                | The region where the resources are created             | variables.tf:5        |
+| Tier | db-f1-micro                | MySQL Database Instance tier                              | sql.tf:9,13           |
+| IP Configuration | projects/${var.project_id}/global/networks/default     | The private network for the MySQL Instance              | sql.tf:17-20          |
+| User   | `var.db_user`                | MySQL Database Username                                    | variables.tf:6        |
+| Password | `var.db_password`           | MySQL Database Password                                   | variables.tf:7        |
 
-### Backend Component
-The backend component is a RESTful API that runs on a separate GKE cluster. It communicates with the frontend component using HTTP and interacts with the Cloud SQL database instance using TCP.
+5. **GKE Node Configuration**
 
-```mermaid
-sequenceDiagram
-    participant Backend as "Backend"
-    participant CloudSQL as "Cloud SQL Database Instance"
-    Backend->>CloudSQL: SELECT * FROM table
-    CloudSQL->>Backend: 200 OK
-```
-Sources: [k8s/backend-deployment.yaml:1-20](), [k8s/backend-service.yaml:1-10]()
+| Name         | Type/Value  | Description                             | Sources: gke.tf:21-34 |
+|-------------|------------|-----------------------------------------|-----------------------|
+| Machine Type| e2-medium  | The machine type for the GKE nodes       |                       |
+| OAuth Scopes| [....]      | Google API scopes required for the nodes | gke.tf:30            |
 
-### Cloud SQL Database Instance
-The Cloud SQL database instance is a MySQL database that runs on GCP. It stores data for the web application and interacts with the backend component using TCP.
-
-```mermaid
-graph TD
-    CloudSQL[Cloud SQL Database Instance]
-    CloudSQL -->|tcp|> MySQL[MySQL Database]
-```
-Sources: [sql.tf:1-15]()
-
-## Configuration
-
-### GKE Cluster Configuration
-The GKE cluster is configured using Terraform, with a default node count of 2 and a machine type of `e2-medium`.
-
-| Parameter | Value |
-| --- | --- |
-| Node Count | 2 |
-| Machine Type | e2-medium |
-
-Sources: [gke.tf:5-10]()
-
-### Cloud SQL Database Instance Configuration
-The Cloud SQL database instance is configured using Terraform, with a default database version of `MYSQL_8_0` and a tier of `db-f1-micro`.
-
-| Parameter | Value |
-| --- | --- |
-| Database Version | MYSQL_8_0 |
-| Tier | db-f1-micro |
-
-Sources: [sql.tf:5-10]()
-
-### Environment Variables
-The application uses environment variables to configure database connections.
-
-| Variable | Value |
-| --- | --- |
-| DB_HOST | 127.0.0.1 |
-| DB_USER | ${db_user} |
-| DB_PASSWORD | ${db_password} |
-
-Sources: [k8s/deployment.yaml:10-15](), [k8s/backend-deployment.yaml:10-15]()
-
-## Code Snippets
-
-### Terraform Configuration
-The project uses Terraform to configure GCP resources, including the GKE cluster and Cloud SQL database instance.
-```terraform
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-```
-Sources: [main.tf:1-5]()
-
-### Kubernetes Deployment YAML
-The frontend and backend components are deployed using Kubernetes deployment YAML files.
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: web-app
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: web
-```
-Sources: [k8s/deployment.yaml:1-10](), [k8s/frontend-deployment.yaml:1-10](), [k8s/backend-deployment.yaml:1-10]()
+6. **Kubernetes Service Types**
+   - **LoadBalancer (service.yaml, frontend-service.yaml)**: Used to expose services to the internet. In this case, it exposes ports 80 and 80 for the frontend and frontend services respectively.
+   - **ClusterIP (backend-service.yaml)**: This service type creates a unique IP within the cluster that can be used by other services to communicate with this particular service instance. It is optional and can be replaced by `Headless` for service discovery purposes.
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-> ⚠️ Mermaid diagram generation failed.
+```mermaid
+graph TD;
+    subgraph GCP
+        A[Project]
+        B[Region]
+        C[GKE Cluster]("web-app-cluster")
+        D[Google Cloud SQL]("mysql-db")
+    end
+    subgraph Kubernetes
+        E[Deployment]("web-app")
+        F[Service]("web-app-service")
+        G[Deployment]("backend")
+        H[Service]("backend-service")
+        I[Deployment]("frontend")
+        J[Service]("frontend-service")
+    end
+    A --var.project_id --> C
+    A --var.region --> B
+    B --> C
+    D --var.db_user, var.db_password --> G, I
+    D --> E, I
+    C --> E, I, G, H
+    F --> E
+    H --> G
+    J --> I
+```
 
 _Generated by P4CodexIQ
