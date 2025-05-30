@@ -1,84 +1,86 @@
-<details>
-<summary>Relevant source files</summary>
-
-The following files were used as context for generating this readme page:
-
-
-- [output.tf](output.tf)
-
-- [variables.tf](variables.tf)
-
-- [sql.tf](sql.tf)
-
-- [main.tf](main.tf)
-
-- [k8s/deployment.yaml](k8s/deployment.yaml)
-
-- [k8s/service.yaml](k8s/service.yaml)
-
-<!-- Add additional relevant files if fewer than 5 were provided -->
-</details>
 # Project Overview
-Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
+Based ONLY on the content of the [output.tf](output.tf), [variables.tf](variables.tf), [sql.tf](sql.tf), [main.tf](main.tf), and [k8s/deployment.yaml](k8s/deployment.yaml) files.
 
-## Architecture
+## Introduction
+This project aims to create a scalable web application using Google Cloud SQL, Kubernetes, and Secret Management. The goal is to provide a secure and reliable way to connect to the MySQL database instance.
 
-The project utilizes a combination of Google Cloud, AWS, and Azure providers to deploy a web application. The infrastructure is set up using Terraform configuration files. The architecture consists of:
+### Architecture Overview
 
-* A Google SQL database instance (mysql-db) running MySQL 8.0 in the us-central1 region.
-* Two replicas of a deployment named "web-app" which runs an application container, and a cloudsql-proxy container to connect to the database.
+The architecture consists of:
 
-## Components
+* A Google Cloud SQL instance for storing data
+* A Kubernetes deployment for running the web application
+* A Kubernetes service for exposing the web application to the outside world
+* Secret Management using Kubernetes secrets and Google Cloud SQL credentials
 
-The project has several key components:
+### Data Flow
 
-### CloudSQL Proxy
-The cloudsql-proxy container is responsible for establishing connections between the application and the Google SQL database. It uses a service account to authenticate with the database.
+The data flow is as follows:
 
-### Secret Stores
-Secrets are stored in a secret named "cloudsql-instance-credentials" which contains the credentials for the cloudsql-proxy container.
+1. The web application connects to the MySQL database instance through a cloudsql-proxy container.
+2. The cloudsql-proxy container uses the project ID, region, and instance name to establish a connection to the MySQL database instance.
+3. The web application sends requests to the MySQL database instance using the established connection.
+4. The MySQL database instance processes the requests and returns the results to the web application.
 
-## Data Flow
+### Configuration
 
-The data flow for this project involves:
+The configuration for this project includes:
 
-1. The application container connecting to the cloudsql-proxy container.
-2. The cloudsql-proxy container connecting to the Google SQL database (mysql-db) using the provided credentials.
+* Setting up the Google Cloud SQL instance with the correct project ID, region, and instance name
+* Creating a Kubernetes deployment for running the web application
+* Creating a Kubernetes service for exposing the web application to the outside world
+* Configuring the cloudsql-proxy container to connect to the MySQL database instance using the project ID, region, and instance name
 
-### SQL Database
-The SQL database instance is set up with a specific version and region. It has a private network IP configuration.
-
-## Configuration
-
-The project uses Terraform configuration files to manage its infrastructure. The main.tf file sets up the providers for Google Cloud, AWS, and Azure. The variables.tf file defines several variables that are used throughout the project, including the project ID, region, GKE cluster name, DB user, and DB password.
-
-## Deployment
-The deployment.yaml file defines a deployment named "web-app" which runs two replicas of an application container and a cloudsql-proxy container. The service.yaml file defines a LoadBalancer type service for the web-app.
-
-### Mermaid Diagrams
-
-Here is a flowchart diagram illustrating the data flow:
+## Mermaid Diagrams
+### Flowchart: Cloud SQL Proxy Connection
 ```mermaid
 flowchart TD
-  A[Application Container] -->|connect to|> B(CloudSQL Proxy)
-  B -->|authenticate with|> C[Google SQL Database (mysql-db)]
+    A[Web Application] -->|Cloudsql-Proxy| B[MySQL Database Instance]
+    B-->|Connection| C[Google Cloud SQL Instance]
 ```
+Sources: [k8s/deployment.yaml](k8s/deployment.yaml):14-15
+
+### Sequence Diagram: Web Application Request
+```mermaid
+sequenceDiagram
+    participant Web App as "Web Application"
+    participant MySQL Database Instance as "MySQL Database Instance"
+    participant Google Cloud SQL Instance as "Google Cloud SQL Instance"
+
+    note over Web App, MySQL Database Instance, Google Cloud SQL Instance, "Establish connection using cloudsql-proxy"
+    Web App->>MySQL Database Instance: Request
+    MySQL Database Instance->>Web App: Response
+
+    Note right of Web App, "Get data from MySQL Database Instance"
+```
+Sources: [k8s/deployment.yaml](k8s/deployment.yaml):14-15
 
 ## Tables
-
-Here is a table summarizing the variables defined in the variables.tf file:
-
-| Variable Name | Default Value |
+### API Endpoints
+| Endpoint | Description |
 | --- | --- |
-| project_id |  |
-| region | us-central1 |
-| gke_cluster_name | web-app-cluster |
-| db_user | admin |
-| db_password | (sensitive) |
+| / | Home page |
+| /api/data | Retrieve data from the database |
+
+Sources: [output.tf](output.tf), [sql.tf](sql.tf)
 
 ## Code Snippets
+```terraform
+resource "google_sql_database_instance" "mysql_instance" {
+  name             = "mysql-db"
+  database_version = "MYSQL_8_0"
+  region           = var.region
 
-Here is a code snippet from the deployment.yaml file:
+  settings {
+    tier = "db-f1-micro"
+    ip_configuration {
+      private_network = "projects/${var.project_id}/global/networks/default"
+    }
+  }
+}
+```
+Sources: [sql.tf](sql.tf):3-6
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -112,28 +114,45 @@ spec:
             secretKeyRef:
               name: db-credentials
               key: password
+
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.33.0
+        command: ["/cloud_sql_proxy",
+                  "-instances=PROJECT_ID:REGION:mysql-db=tcp:3306",
+                  "-credential_file=/secrets/service_account.json"]
+        volumeMounts:
+        - name: sql-creds
+          mountPath: /secrets
+          readOnly: true
+
+      volumes:
+      - name: sql-creds
+        secret:
+          secretName: cloudsql-instance-credentials
 ```
+Sources: [k8s/deployment.yaml](k8s/deployment.yaml):1-20
 
-## Source Citations
-
-Sources:
-
-* [output.tf](output.tf):1-5
-* [variables.tf](variables.tf):1-10
-* [sql.tf](sql.tf):1-15
-* [main.tf](main.tf):1-20
-* [k8s/deployment.yaml](k8s/deployment.yaml):1-30
-* [k8s/service.yaml](k8s/service.yaml):1-5
+## Conclusion/Summary
+This project provides a scalable and secure way to connect to the MySQL database instance using Google Cloud SQL, Kubernetes, and Secret Management. The architecture includes a cloudsql-proxy container that establishes a connection to the MySQL database instance, and a Kubernetes deployment and service for running and exposing the web application.
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
 ```mermaid
-graph LR
-    A[Instance] -->|Connection Name|> B(SQL Instance Connection Name)
-    C[Settings] -->|Tier, Private Network|> D(Google Cloud SQL Settings)
-    E[Users] -->|Name, Password|> F(Google Cloud SQL User)
+graph TD
+    A[Google Cloud Platform] -->|Cloud SQL|> B[MySQL Database Instance]
+    A -->|Kubernetes Cluster|> C[K8s Deployment]
+    C -->|Container 1|> D[Web App Container]
+    C -->|Container 2|> E[CloudSQL Proxy Container]
+    D -->|DB_HOST|> F[127.0.0.1]
+    D -->|DB_USER|> G[Secret Key Ref (db-credentials, username)]
+    D -->|DB_PASSWORD|> H[Secret Key Ref (db-credentials, password)]
+    E -->|CloudSQL Proxy Command|> I[/cloud_sql_proxy, ...]
+    E -->|Volume Mounts|> J[sql-creds]
+    J -->|Secret Name|> K[cloudsql-instance-credentials]
+    C -->|Service|> L[K8s Service]
+    L -->|Load Balancer|> M[External Traffic]
 ```
 
 _Generated by P4CodexIQ
