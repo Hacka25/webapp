@@ -1,49 +1,61 @@
 # Project Overview
 
-**Introduction**
-The "Project Overview" page provides a comprehensive overview of the project's infrastructure, architecture, and components. This page is designed to serve as a starting point for understanding the project's overall structure and how its various parts interact with each other.
+Project Overview is a crucial feature that integrates multiple components to provide a comprehensive overview of the project's architecture, data flow, and key functionality. This document aims to provide a detailed explanation of the Project Overview feature, based on the provided [RELEVANT_SOURCE_FILES].
 
-### Architecture Overview
-The project consists of several key components:
+## Architecture
 
-* **GKE (Google Kubernetes Engine)**: A managed environment for deploying, managing, and scaling containerized applications.
-* **Cloud SQL**: A fully managed database service that supports MySQL, PostgreSQL, and SQL Server databases.
-* **Kubernetes Deployments**: Used to manage the scalability and availability of application containers.
+The Project Overview feature is built using Terraform, a popular infrastructure-as-code tool, and Kubernetes (K8s), an open-source container orchestration system. The architecture consists of three main components:
 
-### GKE Cluster
-The project utilizes a single GKE cluster, named `web-app-cluster`, which is located in the `us-central1` region. The cluster is configured with one node pool, `primary-node-pool`, containing two nodes. Each node runs the `e2-medium` machine type and has access to the following resources:
-	* `https://www.googleapis.com/auth/cloud-platform`
+1. **Google Cloud SQL**: A managed relational database service that provides MySQL 8.0 instances for storing application data.
+2. **Google Container Cluster** (GKE): A fully managed environment for deploying and managing containerized applications.
+3. **Kubernetes Deployments**: Managed deployments of containers, including the Web App and Backend services.
 
-### Cloud SQL Instance
-The project utilizes a single Cloud SQL instance named `mysql-db`. This instance is configured with a MySQL 8.0 database and supports connections via TCP port 3306.
+### Data Flow
 
-### Kubernetes Deployments
-Two deployments are used in this project:
+The Project Overview feature collects data from various sources:
 
-* **Web App Deployment**: Deploys the web application container, which listens on port 8080.
-* **Backend Deployment**: Deploys the backend service container, which also listens on port 8080. This deployment utilizes a cloudsql-proxy container to establish connections to the Cloud SQL instance.
+1. **Google Cloud SQL**: Retrieves database instance information, such as name, region, and connection details.
+2. **Google Container Cluster** (GKE): Obtains cluster and node pool information, including node counts and machine types.
+3. **Kubernetes Deployments**: Collects deployment metadata, including replica counts, container names, and ports.
 
-### Services
-Three services are used in this project:
+The collected data is then presented in a structured format, providing insights into the project's architecture and key components.
 
-* **Web App Service**: A load-balanced service that exposes port 80 and directs traffic to the web app container.
-* **Backend Service**: A headless service that allows for service discovery and exposure of port 8080. This service is used by the backend deployment.
-* **Frontend Service**: A load-balanced service that exposes port 80 and directs traffic to the frontend container.
+## Detailed Sections
 
-### Mermaid Diagrams
-[flowchart TD]
+### Component Overview
 
-* GKE Cluster(Google Container Cluster)
-* Cloud SQL Instance(Cloud SQL Database)
-* Web App Deployment(Kubernetes Deployment)
-* Backend Deployment(Kubernetes Deployment)
+* The Google Cloud SQL instance provides a MySQL 8.0 database for storing application data.
+* The Google Container Cluster (GKE) hosts containerized applications, including the Web App and Backend services.
+* Kubernetes Deployments manage the deployment and scaling of containers.
 
-Note: This diagram illustrates the high-level architecture of the project, showing the relationships between the GKE cluster, Cloud SQL instance, and Kubernetes deployments.
+### Architecture Diagram
+
+```mermaid
+graph TD
+    A[Google Cloud SQL] -->|database instance|> B[MySQL 8.0]
+    C[GKE] -->|container cluster|> D[Containerized Applications]
+    E[Kubernetes Deployments] -->|managed deployments|> F[Web App]
+    G[Kubernetes Deployments] -->|managed deployments|> H[Backend Services]
+```
 
 ### Code Snippets
+
 ```terraform
 output "gke_cluster_name" {
   value = google_container_cluster.primary.name
+}
+
+resource "google_sql_database_instance" "mysql_instance" {
+  name             = "mysql-db"
+  database_version = "MYSQL_8_0"
+  region           = var.region
+
+  settings {
+    tier = "db-f1-micro"
+    ip_configuration {
+      private_network = "projects/${var.project_id}/global/networks/default"
+    }
+  }
 }
 ```
 
@@ -69,34 +81,40 @@ spec:
         - containerPort: 8080
 ```
 
-### Tables
-
-| Component | Description |
-| --- | --- |
-| GKE Cluster | Manages containerized applications |
-| Cloud SQL Instance | Provides a fully managed database service |
-| Web App Deployment | Deploys the web application container |
-| Backend Deployment | Deploys the backend service container |
-
 ### Source Citations
-* `Sources: output.tf:1-2()`
-* `Sources: variables.tf:3-5()`
-* `Sources: sql.tf:6-10()`
-* `Sources: main.tf:11-12()`
-* `Sources: gke.tf:13-15()`
-* `Sources: k8s/deployment.yaml:16-20()`
-* `Sources: k8s/service.yaml:21-23()`
-
-### Conclusion/Summary
-In conclusion, the "Project Overview" page provides a comprehensive overview of the project's infrastructure, architecture, and components. This page is designed to serve as a starting point for understanding the project's overall structure and how its various parts interact with each other.
 
 Sources:
-[output.tf:1-2()], [variables.tf:3-5()], [sql.tf:6-10()], [main.tf:11-12()], [gke.tf:13-15()], [k8s/deployment.yaml:16-20()], [k8s/service.yaml:21-23()]
+
+* [output.tf](output.tf):1-3
+* [variables.tf](variables.tf):1-5
+* [sql.tf](sql.tf):1-10
+* [main.tf](main.tf):1-2
+* [gke.tf](gke.tf):1-5
+* [k8s/deployment.yaml](k8s/deployment.yaml):1-15
+* [k8s/service.yaml](k8s/service.yaml):1-5
+
+### Conclusion/Summary
+
+The Project Overview feature provides a comprehensive overview of the project's architecture, data flow, and key functionality. This feature integrates multiple components, including Google Cloud SQL, Google Container Cluster (GKE), and Kubernetes Deployments, to provide valuable insights into the project's structure and operations.
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-> ⚠️ Mermaid diagram generation failed.
+```mermaid
+graph TD
+  A[Variables] --> |project_id, region| B[Provider]
+  B[Provider] --> C[SQL Instance]
+  C[SQL Instance] --> D[DB User]
+  D[DB User] --> E[K8s Deployment]
+  E[K8s Deployment] --> F[CloudSQL Proxy]
+  F[CloudSQL Proxy] --> G[Secret]
+  A[Variables] --> |gke_cluster_name| H[GKE Cluster]
+  H[GKE Cluster] --> I[Node Pool]
+  I[Node Pool] --> J[K8s Service]
+  J[K8s Service] --> K[Load Balancer]
+  E[K8s Deployment] --> L[K8s Service]
+  L[K8s Service] --> M[Load Balancer]
+```
 
 _Generated by P4CodexIQ
