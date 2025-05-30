@@ -1,79 +1,44 @@
-# Project Overview
+The given files are related to a web application being deployed on Google Kubernetes Engine (GKE) using Google Cloud SQL for storing data. The project has a multi-tier architecture with frontend and backend tiers separated by services in the Kubernetes cluster. This readme page will explain the components, data flow, and configurations within this architecture.
 
-Based ONLY on the content of the provided source files, this readme explains the architecture and deployment configuration for a web application using Google Cloud Platform (GCP) and Kubernetes.
+### Architecture Overview
 
-## Detailed Sections
+The high-level architecture consists of three main components:
+1. A Google Cloud SQL instance to store application data (Sources: [sql.tf:3-18]()).
+2. A GKE cluster running the web application (Sources: [gke.tf:3-14]()).
+3. Kubernetes services and deployments for frontend, backend, and cloudsql-proxy components (Sources: [k8s/deployment.yaml:1-40](), [k8s/service.yaml:1-22](), [k8s/backend-service.yaml:1-16](), [k8s/frontend-deployment.yaml:1-32](), and [k8s/backend-deployment.yaml:1-34]()).
 
-### Infrastructure Setup
+### Data Flow
 
-The project sets up an Google Container Cluster with GKE (Google Kubernetes Engine), managed by Terraform (`main.tf`, `gke.tf`) in a specified region (default: "us-central1"). A MySQL database instance (`sql.tf`) is also created for the application to store its data.
-
-### Application Deployment
-
-The application consists of frontend and backend components, both deployed as separate Kubernetes deployments (`k8s/frontend-deployment.yaml`, `k8s/backend-deployment.yaml`). The frontend is exposed via a LoadBalancer Service (`k8s/frontend-service.yaml`), while the backend utilizes a headless service or ClusterIP Service (`k8s/backend-service.yaml`).
-
-#### Frontend
-The frontend container pulls its image from `gcr.io/YOUR_PROJECT_ID/frontend:latest`. The application connects to the MySQL database using environment variables, and mounts a secret volume with the required database credentials.
-
-#### Backend
-The backend container also uses an image from `gcr.io/YOUR_PROJECT_ID/backend:latest` and follows similar practices as the frontend for accessing the MySQL database via environment variables and a mounted credential secret. Additionally, it also provisions the cloudsql-proxy to ensure seamless communication with the MySQL instance on GCP.
-
-### Database Setup
-A MySQL database is created using Google Cloud SQL (`sql.tf`). The instance's name, region, and tier are specified in Terraform variables. Note that the IP configuration is set to use the default network for the project.
-
-## Mermaid Diagrams
+The data flow within this architecture is as follows:
 
 ```mermaid
 graph TD
-    subgraph GCP Infrastructure
-        DB[MySQL Instance]
-        Cluster[GKE Cluster]
-        GKE_Cluster_Name("${var.gke_cluster_name}")
-    end
-
-    subgraph Application Components
-        Frontend[Frontend]
-        Backend[Backend]
-        LoadBalancer[LoadBalancer]
-        HeadlessService[Headless Service]
-    end
-
-    DB --> Backend
-    Backend --> Frontend
-    Cluster --> Frontend
-    Cluster --> Backend
-    Frontend --> LoadBalancer
-    Backend --> HeadlessService
+  A[Client] --> B[Frontend Service]
+  C[Backend Service] --> D[CloudSQL Proxy]
+  E[Cloud SQL Instance] <-- F[CloudSQL Proxy]
+  G[Backend Deployment] <-- H[CloudSQL Proxy]
 ```
+1. The client sends requests to the frontend service (Sources: [k8s/service.yaml:3-7](), [k8s/frontend-deployment.yaml:6-10](), and [k8s/backend-service.yaml:6-9]()).
+2. The frontend service communicates with the backend service (Sources: [k8s/deployment.yaml:30-32]() and [k8s/backend-service.yaml:30-32]()).
+3. The backend service talks to the CloudSQL proxy (Sources: [k8s/backend-deployment.yaml:34-36]()).
+4. The CloudSQL proxy communicates with the Cloud SQL instance (Sources: [k8s/backend-deployment.yaml:38-40]()).
+5. The backend deployment retrieves data from the CloudSQL proxy (Sources: [k8s/backend-deployment.yaml:26-28]() and [k8s/frontend-deployment.yaml:26-28]()).
 
-## Source Code Snippets
+### Key Components and Configurations
 
-### Terraform (`main.tf`)
-```hcl
-provider "google" {
-  project = var.project_id
-  region  = var.region
-}
-```
+- **Frontend Service**: A load balancer service that exposes the frontend deployment to external traffic (Sources: [k8s/service.yaml:1-7](), [k8s/frontend-deployment.yaml:6-10]()).
+  
+- **Backend Service**: A headless service for backend component discovery within the Kubernetes cluster (Sources: [k8s/backend-service.yaml:3-6](), [k8s/backend-deployment.yaml:24-26]()).
+  
+- **CloudSQL Proxy**: A sidecar container running in both frontend and backend deployments to proxy SQL connections securely (Sources: [k8s/deployment.yaml:20-23](), [k8s/backend-deployment.yaml:16-19]()).
+  
+- **Database Environment Variables**: The frontend and backend containers use environment variables for connecting to the database, such as DB_HOST, DB_USER, and DB_PASSWORD (Sources: [k8s/deployment.yaml:26-34](), [k8s/backend-deployment.yaml:26-34]()).
+  
+- **Kubernetes Secrets**: Database credentials are stored as Kubernetes secrets and mounted as volumes for the cloudsql-proxy container (Sources: [k8s/deployment.yaml:10-15](), [k8s/backend-deployment.yaml:10-15]()).
+  
+### Conclusion
 
-### Kubernetes Deployment YAML (`k8s/frontend-deployment.yaml`)
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: frontend
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      tier: frontend
-```
-
-## Source Citations
-- `output.tf`, `variables.tf`, `sql.tf`, `main.tf`, `gke.tf`: for infrastructure setup details
-- `k8s/deployment.yaml`, `k8s/service.yaml`, `k8s/backend-service.yaml`, `k8s/frontend-deployment.yaml`, `k8s/backend-deployment.yaml`, `k8s/frontend-service.yaml`: for application deployment configuration
-
-Sources not shown here are used to host the Docker images and service account credentials, but they have been replaced with placeholders (YOUR\_PROJECT\_ID).
+This architecture demonstrates a multi-tier web application deployed on GKE with separate frontend and backend tiers, all talking to a Cloud SQL instance securely through the cloudsql-proxy component. The data flow is managed by Kubernetes services, while environment variables and secrets are used for configuration.
 
 _Generated by P4CodexIQ
 
@@ -81,39 +46,25 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-
-   SubSystem1["Code Base"] --> File_output.tf["output.tf"]
-   SubSystem1 --> File_variables.tf["variables.tf"]
-   SubSystem1 --> File_sql.tf["sql.tf"]
-   SubSystem1 --> File_main.tf["main.tf"]
-   SubSystem1 --> File_gke.tf["gke.tf"]
-
-   SubSystem2["K8S Files"] --> k8s_deployment.yaml[""k8s/deployment.yaml""]
-   SubSystem2 --> k8s_service.yaml[""k8s/service.yaml""]
-   SubSystem2 --> k8s_backend-service.yaml[""k8s/backend-service.yaml""]
-   SubSystem2 --> k8s_frontend-deployment.yaml[""k8s/frontend-deployment.yaml""]
-   SubSystem2 --> k8s_backend-deployment.yaml[""k8s/backend-deployment.yaml""]
-   SubSystem2 --> k8s_frontend-service.yaml[""k8s/frontend-service.yaml""]
-
-   Resource["Google Container Cluster"] --> google_container_cluster["google_container_cluster.primary"]
-   Resource["SQL Database Instance"] --> google_sql_database_instance["google_sql_database_instance.mysql_instance"]
-   Resource["SQL User"] --> google_sql_user["google_sql_user.users"]
-
-   File_output.tf --> Output["Output Values"]
-   File_variables.tf --> Project["Project ID"], Region, GKE Cluster Name, DB User, Sensitive Flag
-   File_sql.tf --> Instance Name, Database Version, Tier, IP Configuration, Password
-   File_main.tf --> Provider Configuration
-   File_gke.tf --> Container Cluster Name, Location, Remove Default Node Pool, Initial Node Count
-
-   k8s_deployment.yaml --> Deployment["Deployment"]
-   k8s_service.yaml --> Service["Service"]
-   k8s_backend-service.yaml --> Backend Service["Backend Service"]
-   k8s_frontend-deployment.yaml --> Frontend Deployment["Frontend Deployment"]
-   k8s_backend-deployment.yaml --> Backend Deployment["Backend Deployment"]
-   k8s_frontend-service.yaml --> Frontend Service["Frontend Service"]
-
-   google_container_cluster --> Google Container Node Pool["google_container_node_pool.primary_nodes"]
-   google_sql_database_instance --> Google SQL User["google_sql_user.users"]
+A[Project] --> B[output.tf]
+A --> C[variables.tf]
+A --> D[main.tf]
+A --> E[gke.tf]
+A --> F[sql.tf]
+A --> G["k8s/deployment.yaml"]
+A --> H["k8s/service.yaml"]
+A --> I["k8s/backend-service.yaml"]
+A --> J["k8s/frontend-deployment.yaml"]
+A --> K["k8s/backend-deployment.yaml"]
+A --> L["k8s/frontend-service.yaml"]
+B --> |"gke_cluster_name"|J["Deployment"]
+C --> |"project_id, region, gke_cluster_name, db_user, db_password, db_port"|D["Providergoogle"]
+D --> |"Region"|E["GKE Cluster"]
+E --> |"Nodes"|F["SQL Instance"]
+F --> |"Connection Name"|G["Deployment(Frontend + Backend)"]
+G --> |"Service"|H[LoadBalancer]
+I --> |"Backend Service"|K["Deployment(Backend)"]
+K --> |"ClusterIP"|L[LoadBalancer]
 ```
 
 _Generated by P4CodexIQ
