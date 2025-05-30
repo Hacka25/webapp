@@ -1,184 +1,88 @@
 # Project Overview
 
-## Introduction
-The following document provides an overview of the system architecture for [Project Name], detailing its key components and their interrelations. The architecture leverages Google Cloud technologies such as Google Cloud Build, Kubernetes (GKE), and SQL services to provide a scalable and reliable platform.
+## 1. **Introduction**
+The Project Overview describes a distributed system architecture built on Google Cloud Platform (GCP) components such as Google Container Engine (GKE), Kubernetes, and Google SQL. This project integrates frontend and backend services with database management using cloud SQL proxies.
 
-### Key Components
-1. **Google Cloud Build**: Manages the build process for applications, ensuring consistent environments through code quality assurance.
-2. **Kubernetes (GKE)**: Orchestrates Docker containers, providing auto-scaling and load balancing capabilities across Google Cloud Platform (GCP) regions.
-3. **SQL Services**: Hosts database instances for data storage, managed within GKE clusters.
+### Links to Related Components
+- GKE: `gke.tf` - Manages container clusters.
+- SQL: `sql.tf` - Manages database instances and their configurations.
+- Kubernetes: 
+  - `k8s/deployment.yaml`, `k8s/service.yaml`, `k8s/backend-service.yaml`, `k8s/frontend-deployment.yaml`, `k8s/frontend-service.yaml` - Define service deployments.
 
-### Diagram Overview
-```mermaid
-graph TD
-    A[Google Cloud Build] --> B[Kubernetes (GKE)]
-    C[Google SQL Database] --> D[Google Cloud Storage]
-```
+## 2. **Key Components**
 
-## Detailed Sections
+### **1. Configuration Variables**
+- **Project ID**: Defined in `variables.tf` as `project_id`.
+- **Region**: Default is `us-central1` in `variables.tf`.
 
-### Google Cloud Build Configuration
-The build process is configured using `main.tf` to set up Google Build instances across GCP regions.
+### **2. Google Container Cluster**
+- Configured using GKE (`gke.tf`) with name derived from `gke_cluster_name` variable.
 
-#### Key Features and Configuration Parameters:
-- **project_id**: Specifies the Google Project ID.
-- **region**: Default set to "us-central1".
-- **gke_cluster_name**: Default cluster name for Kubernetes orchestration.
+### **3. Google SQL Database Instance**
+- Managed by resource defined in `sql.tf`, configured to use Google Cloud Storage (GCS) for data storage, and placed in tiered zones.
 
-**Code Snippet from main.tf:**
-```tf
-variable "project_id" {}
-variable "region" {
-  default = "us-central1"
-}
-variable "gke_cluster_name" {
-  default = "web-app-cluster"
-}
-```
+## 3. Data Flow
 
-### Kubernetes Deployment and Orchestration
+### **1. Google Cloud Configuration**
+- Uses variables from `variables.tf` (`project_id`, `region`, etc.) to define GKE cluster configuration.
 
-#### Google Container Cluster Setup (gke.tf)
-The primary container cluster is defined with specific configurations to manage node pools and resource allocation.
+### **2. Database Setup**
+- SQL instance settings: `mysql_instance` uses database version "MYSQL_8_0" and private network.
+- User authentication: Uses `db_user` (default 'dadmin') with sensitive `db_password`.
 
-**Key Configurations:**
-- **name**: Determined by the `gke_cluster_name` variable.
-- **location**: Based on the `region` variable.
-- **node_count**: Default set to 1, scalable as needed.
+## 4. Mermaid Diagrams
+
+### **1. Google Container Cluster Deployment**
 
 ```mermaid
 graph TD
-    A[Google Container Cluster] --> B[Node Pools]
+    C[gke_cluster_name] --> N[namespaced cluster]
+    N --> P[ClusterIP set to None]
 ```
 
-#### Google Container Node Pool (gke.tf)
-The node pool configuration ensures consistent resource allocation and autoscaling for containers.
-
-**Key Configurations:**
-- **name**: "primaries-node-pool".
-- **cluster**: Refers to the container cluster name.
-- **node_count**: Default 2, adjustable based on needs.
-
+### **2. Google SQL Database Proxy Deployment**
 ```mermaid
 graph TD
-    C[Node Config] --> D[Machine Type]
+    S[sql-creds] --> D[databaseProxy]
+    S --> B[backend]
 ```
 
-### SQL Database Services
+## 5. Code Snippets
 
-#### Google SQL Database Instance (sql.tf)
-Manages database instances within GKE clusters for data storage and access.
-
-**Key Configurations:**
-- **database_version**: Set to "MYSQL_8_0".
-- **region**: Determined by the `region` variable.
-- **network Configuration**: Uses private networks in GCP for isolation and security.
-
-```mermaid
-graph TD
-    E[Google SQL Database] --> F[Database Configuration]
+### **1. Google SQL Database Configuration (k8s/deployment.yaml)**
+```yaml
+cloud_sql_proxy:
+  - instances=PROJECT_ID:REGION:mysql-db=tcp:3306
+  - credential_file=/secrets/service_account.json
 ```
 
-#### Google SQL User Instance (sql.tf)
-Manages authentication and authorization for database users within GKE clusters.
-
-**Key Configurations:**
-- **name**: Derived from the `db_user` variable.
-- **database_name**: Set to "mysql-db".
-
-```mermaid
-graph TD
-    G[Database User] --> H[Database Configuration]
+### **2. Google Container Cluster Resource (gke.tf)**
+```yaml
+remove_default_node_pool=true
+initial_node_count=1
+node_count=2
+machine_type="e2-medium"
+oauth_scopes=["https://www.googleapis.com/auth/cloud-platform"]
 ```
 
-## API Endpoints and Configurations
+## 6. Key Observations
 
-### Google Container Cluster API (gke.tf)
-Manages cluster configurations, including node pools and resource allocation.
+- The system leverages GCP's scalable and reliable services for database management.
+- Database credentials are securely managed through Google Cloud Storage.
 
-**Key Configurations:**
-- **cluster**: Determined by the `gke_cluster_name` variable.
-- **location**: Based on the `region` variable.
+## 7. Troubleshooting
+- Ensure network settings match project region requirements.
+- Verify correct configuration of GKE cluster name in `gke_cluster_name` variable.
 
-```mermaid
-graph TD
-    I[Cluster] --> J[Node Pools]
-```
+## 8. Deployment Best Practices
+- Use load balancers (`k8s/service.yaml`) for traffic distribution.
+- Apply proper security policies and access controls to the database proxies.
 
-### Google Container Node Pool API (gke.tf)
-Manages node configurations and autoscaling for container nodes in a cluster.
+---
 
-**Key Configurations:**
-- **node_count**: Default 2, adjustable based on needs.
-- **machine_type**: Set to "e2-medium".
+# Project Overview
 
-```mermaid
-graph TD
-    K[Node Config] --> L[Machine Type]
-```
-
-### Google Cloud Build API (main.tf)
- Manages build processes and deployment of applications.
-
-**Key Configurations:**
-- **project_id**: Determined by the `project_id` variable.
-- **region**: Default set to "us-central1".
-
-```mermaid
-graph TD
-    M[Build] --> N[Project ID]
-```
-
-## Table of Key Features
-
-| Feature                | Configuration Source  |
-|-----------------------|-----------------------|
-| Google Cloud Build     | main.tf               |
-| Kubernetes (GKE)       | gke(tf)              |
-| Google SQL Database    | sql(tf)              |
-| Google SQL User        | sql(tf)              |
-
-## Code Snippets
-
-### Extract from main.tf
-```tf
-variable "project_id" {}
-variable "region" {
-  default = "us-central1"
-}
-variable "gke_cluster_name" {
-  default = "web-app-cluster"
-}
-```
-
-### Extract from gke(tf)
-```tf
-apiVersion: v1beta1
-kind: GoogleContainerCluster
-metadata:
-  name: ${gke_cluster_name}
-  nodePools:
-    - name: "primaries-node-pool",
-      containerSpecs:
-        - selector: cluster=us-central1
-          template: gke-cluster-template
-          arguments: "--node-count=2"
-```
-
-### Extract from sql(tf)
-```tf
-apiVersion: v1.6
-kind: GoogleSQLDatabaseInstance
-metadata:
-  name: ${db_name}
-  instanceName: "mysql-instance"
-  databaseName: "mysql"
-  region: "us-central1"
-```
-
-## Conclusion
-
-The architecture combines Google Cloud Build, Kubernetes (GKE), and SQL services to provide a robust platform for application deployment. Each component plays a critical role in ensuring scalability, reliability, and maintainability of the system.
+This project is a distributed system built on Google Cloud Platform, utilizing GKE for container orchestration and Kubernetes for service deployments. The architecture manages a Google SQL database across multiple instances with secure credentials and efficient data storage using tiered zones in GCS.
 
 _Generated by P4CodexIQ
 
@@ -186,35 +90,20 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-  A[web-app] --> B["GKE Cluster (gke_cluster_name)"]
-  A --> C["Google Container Node Pool (primary_nodes)"]
-
-  D[MySQL Database Instance] --> E["Google SQL Database Instance (mysql_instance)"]
-
-  F[Google SQL User] --> G["Google SQL User (users)"]
-
-  H[Web App Deployment]
-    H --> I["Frontend Deployment"]
-    H --> J["Backend Deployment"]
-
-  K[Load Balancer Service]
-    K --> L["Frontend Service"]
-
-  M[Load Balancer Service]
-    M --> N["Backend Service"]
-
-  O[Cluster IP] --> P["Frontend-Service Discovery"]
-  Q[Cluster IP] --> R["Backend-Service Discovery"]
-
-  S[Google Container Cluster]
-    S --> T["Primary Node Pools (primaries-node-pool)"]
-
-  U[Secret Key Ref]
-    U --> V["Database Credentials"]
-
-  W["Environment Variables"] --> X["DB_HOST"]
-  W --> Y["DB_USER"]
-  W --> Z["DB_PASSWORD"]
+    A[project_id] --> B[region]
+    B --> C[var.region]
+    D[gke_cluster_name] --> E[var.gke_cluster_name]
+    F[mysql_instance] --> G[name="mysql-db"]
+    H[google_sql_database_instance] --> I[name="gke_cluster_name"]
+    J[google_sql_user] --> K[name="users"]
+    L[web-app] --> M[web-app]
+    N[frontend] --> O[frontend]
+    P[backend] --> Q[backend]
+    R[web-app-service] --> S[LoadBalancer]
+    T[backend-service] --> U[LoadBalancer]
+    V[web-app] --> W[LoadBalancer]
+    X[frontend-deployment] --> Y[Frontend]
+    Z[backend-deployment] --> AA[Backend]
 ```
 
 _Generated by P4CodexIQ
