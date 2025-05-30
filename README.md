@@ -1,44 +1,63 @@
 # Project Overview
 
-Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
+Based ONLY on the content of the provided source files:
 
-1. **Introduction:** This project is a containerized web application deployed on Google Kubernetes Engine (GKE). The application consists of frontend and backend services, which communicate with a MySQL database instance hosted on Google Cloud SQL. This readme provides an overview of the architecture, key components, and configuration details for the overall project.
+1. **Introduction:** This project is an example Kubernetes (K8s) deployment for a web application running in Google Kubernetes Engine (GKE). The deployment consists of frontend, backend services, and a MySQL database managed using Terraform infrastructure as code.
 
 2. **Detailed Sections:**
 
-    ## Google Kubernetes Engine (GKE) Cluster
-        - The GKE cluster is created using Terraform with the name specified in `variables.tf`.
-        - A default node pool of size 1 is defined, and additional nodes are added as per the number configured in `gke.tf`.
-        - The cluster's location (region) is set to `us-central1` by default or as provided in the `variables.tf` file.
+   ## GKE Cluster
+    - **Purpose**: Manages the creation and configuration of a Google Kubernetes Engine cluster.
+      - **Key Components**: `google_container_cluster.primary` resource in `gke.tf`.
+        * `name`, `location`, `remove_default_node_pool`, `initial_node_count`.
 
-    ## Google Cloud SQL Database Instance
-        - A MySQL database instance with the name "mysql-db" and version 8.0 is created using Terraform in the `sql.tf` file.
-        - The instance is configured to use the default network for the project and a "db-f1-micro" tier.
-        - A user (admin) is created with the specified password, which can be accessed via environment variables in the application containers.
+    - **Initial Node Pool Configuration**: Defines the initial number of nodes and their machine type for the GKE cluster.
+      - **Key Components**: `google_container_node_pool.primary_nodes` resource in `gke.tf`.
+        * `name`, `cluster`, `location`, `node_count`, `machine_type`.
 
-    ## Kubernetes Deployments & Services
-        - The frontend and backend services are defined as deployments in separate YAML files (`k8s/frontend-deployment.yaml`, `k8s/backend-deployment.yaml`).
-            * Each deployment creates a pod with the specified container image (replace `YOUR_PROJECT_ID` accordingly) and required ports for communication.
-            * Both deployments include a cloudsql-proxy container to manage communication with the Google Cloud SQL instance.
-        - Services are defined in separate YAML files (`k8s/service.yaml`, `k8s/frontend-service.yaml`, `k8s/backend-service.yaml`) to expose the corresponding applications to external traffic.
-            * The frontend and backend services are load-balanced, while the backend service can be made headless or use a ClusterIP if needed for service discovery.
+   ## MySQL Database (Google Cloud SQL)
+    - **Purpose**: Creates and configures a Google Cloud SQL instance for the application to use as its data storage.
+      - **Key Components**: `google_sql_database_instance` resource in `sql.tf`.
+        * `name`, `database_version`, `region`, `settings`.
+    - **Database User Management**: Creates a user with defined username and password for the Google Cloud SQL instance.
+      - **Key Components**: `google_sql_user` resource in `sql.tf`.
+        * `name`, `instance`, `password`.
 
-3. **Mermaid Diagrams**
+   ## Kubernetes Deployments
+    - **Purpose**: Manages the deployment of Docker containers for the web application's frontend and backend services using K8s manifests.
+      - **Key Components**: `deployment.yaml`, `backend-deployment.yaml`, `frontend-deployment.yaml`.
+        * `apiVersion`, `kind`, `metadata`, `spec`, `replicas`, `selector`, `template`, `containers`, `ports`, `env`, `volumeMounts`, `volumes`, and their respective properties.
 
-    ```mermaid
-    flowchart TD
-        App["Frontend"] --> DBProxy["CloudSQL Proxy"]
-        App["Backend"] --> DBProxy["CloudSQL Proxy"]
-        DBProxy["CloudSQL Proxy"] --> DB["MySQL Database"]
-    ```
+   ## Kubernetes Services
+    - **Purpose**: Defines services for the web application's frontend, backend, and load balancing using K8s manifests.
+      - **Key Components**: `service.yaml`, `backend-service.yaml`, `frontend-service.yaml`.
+        * `apiVersion`, `kind`, `metadata`, `name`, `spec`, `type`, `selector`, `ports`, and their respective properties.
 
-4. **Source Citations:**
-   - `variables.tf:2-8` for GKE cluster name and default values
-   - `gke.tf:2-6,9-10` for Google Kubernetes Engine configuration
-   - `sql.tf:3-11` for MySQL database instance creation and user management
-   - `k8s/deployment.yaml`, `k8s/service.yaml`, `k8s/frontend-deployment.yaml`, `k8s/backend-deployment.yaml`, `k8s/frontend-service.yaml`, `k8s/backend-service.yaml` for Kubernetes deployment and service configurations
+3. **Mermaid Diagrams:**
+   ```mermaid
+   flowchart TD;
+    SubGraph(GKE Cluster)
+      Cluster["Cluster"] --> |Create| NodePool["Node Pool"];
+      Note right of NodePool("Initial nodes: 1\nMachine type: e2-medium");
+    End
+    SubGraph(MySQL Database)
+      DB_Instance["Database Instance"] --> |Create| User["User"];
+    End
+    Frontend["Frontend Service"] --> |Deploy| Frontend_Deployment["Deployment"];
+    Backend["Backend Service"] --> |Deploy| Backend_Deployment["Deployment"];
+   ```
 
-5. **Conclusion/Summary:** This project showcases the deployment of a web application with frontend and backend services on GKE, using Google Cloud SQL as the database. The project demonstrates the configuration and setup process for these components, providing a strong foundation for developing cloud-native applications in this environment.
+4. **Tables:**
+
+   | Component                  | Description                                                                          |
+   |----------------------------|--------------------------------------------------------------------------------------|
+   | GKE Cluster                | Manages Google Kubernetes Engine cluster creation and configuration.               |
+   | Node Pool                  | Initial number of nodes and their machine type for the GKE cluster.              |
+   | MySQL Database             | Manages Google Cloud SQL instance creation, configuration, and user management.   |
+   | Deployment (Frontend/Backend)| Deploys Docker containers for frontend/backend services using K8s manifests.     |
+   | Service (Frontend/Backend)  | Defines services for load balancing and communication between services.        |
+
+5. **Environment Variables:** The frontend and backend containers have environment variables set for the MySQL connection details, including `DB_HOST`, `DB_USER`, and `DB_PASSWORD`. These values are either hardcoded or obtained from a Kubernetes secret called `db-credentials`.
 
 _Generated by P4CodexIQ
 
@@ -46,57 +65,47 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-    subgraph Infrastructure
-        A[Google Cloud Project]
-        B[GKE Cluster]("${google_container_cluster.primary.name}")
-        C[MySQL Instance]("${google_sql_database_instance.mysql_instance.connection_name}")
+
+    subgraph Application
+        Deployment("k8s/deployment.yaml")
+        Service("k8s/service.yaml")
+        Backend_Deployment("k8s/backend-deployment.yaml")
+        Frontend_Deployment("k8s/frontend-deployment.yaml")
+        Backend_Service("k8s/backend-service.yaml")
+        Frontend_Service("k8s/frontend-service.yaml")
     end
 
-    subgraph Terraform Files
-        D[variables.tf]
-        E[output.tf]
-        F[sql.tf]
-        G[gke.tf]
-        H[main.tf]
+    subgraph Google Cloud Resources
+        GKE("google_container_cluster.primary")
+        NodePool("google_container_node_pool.primary_nodes")
+        DBInstance("google_sql_database_instance.mysql_instance")
+        DBUser("google_sql_user.users")
     end
 
-    A --> B
-    A --> C
-    B --> F
-    F --> google_sql_user
-    F --> google_sql_database_instance
-    G --> B
-    G --> H
-    H --> E
-    D --> H
-    E --> A.gke_cluster_name
-    E --> A.sql_instance_connection_name
-
-    subgraph Kubernetes Manifests
-        I["k8s/deployment.yaml"]("Deployment: web-app")
-        J["k8s/service.yaml"]("Service: web-app")
-        K["k8s/backend-service.yaml"]("Service: backend")
-        L["k8s/frontend-deployment.yaml"]("Deployment: frontend")
-        M["k8s/backend-deployment.yaml"]("Deployment: backend")
-        N["k8s/frontend-service.yaml"]("Service: frontend")
+    subgraph Secrets and Configs
+        Credentials("k8s/deployment.yaml:db-credentials")
+        InstanceCreds("k8s/deployment.yaml:cloudsql-instance-credentials")
+        ServiceAccountJSON("gcr.io/cloudsql-docker/gce-proxy:1.33.0")
     end
 
-    I --> J
-    K --> B
-    L --> B
-    M --> B
-    N --> L
+    GKE --> NodePool
+    NodePool --> [2] Container
+    Container -.-> Deployment
+    Container -.-> Service
+    Container -.-> Backend_Deployment
+    Container -.-> Backend_Service
+    Container -.-> Frontend_Deployment
+    Container -.-> Frontend_Service
 
-    B --> I.image
-    B --> I.env.DB_HOST
-    B --> I.env.DB_USER
-    B --> I.env.DB_PASSWORD
-    B --> I.envFrom.secretKeyRef.name
-    B --> M.image
-    B --> M.env.DB_HOST
-    B --> M.env.DB_USER
-    B --> M.env.DB_PASSWORD
-    B --> M.envFrom.secretKeyRef.name
+    DBInstance --> DBUser
+    DBUser --> Deployment
+    DBUser --> Backend_Deployment
+
+    Credentials --> Deployment
+    Credentials --> Backend_Deployment
+    InstanceCreds --> Deployment
+    InstanceCreds --> Backend_Deployment
+    ServiceAccountJSON --> Container
 ```
 
 _Generated by P4CodexIQ
