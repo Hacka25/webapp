@@ -14,6 +14,3 @@ variable "db_password" {
 variable "db_port" {
   default = 5432
 }
-variable "db_port_1" {
-  default = 3306
-}
