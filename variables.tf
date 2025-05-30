@@ -11,3 +11,6 @@ variable "db_user" {
 variable "db_password" {
   sensitive = true
 }
+variable "do_port" {
+  default = 5432
+}
