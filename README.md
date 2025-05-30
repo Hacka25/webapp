@@ -18,61 +18,54 @@ The following files were used as context for generating this readme page:
 
 <!-- Add additional relevant files if fewer than 5 were provided -->
 </details>
-
 # Project Overview
+Based ONLY on the content of the [RELEVANT_SOURCE_FILES]:
 
-This project is a hybrid cloud deployment that combines Google Cloud Platform (GCP) and Amazon Web Services (AWS). The overview provides an in-depth look at the architecture, components, data flow, and logic of the project.
+### Introduction
 
-## Introduction
-The project aims to create a scalable and secure web application using Kubernetes (K8s) on GCP. The application connects to a Cloud SQL instance for database operations. This overview will guide you through the key components and their interactions.
+This project is a combination of Google Cloud Platform (GCP) and Kubernetes-based infrastructure. It consists of a MySQL database instance, a GKE cluster with a web application deployed as a deployment, and a service exposing the application to the outside world.
+
+The following sections will delve into the details of each component and its configuration.
 
 ### Architecture
 
-The architecture consists of three main components:
+#### Database Instance
 
-*   **Cloud SQL Instance**: A MySQL 8.0 database instance created using Terraform.
-*   **GKE Cluster**: A Google Kubernetes Engine (GKE) cluster deployed in the `us-central1` region, running a web application and a Cloud SQL proxy container.
-*   **Kubernetes Deployment and Service**: A K8s deployment managing two replicas of the web application, and a service exposing the application on port 80.
+The project uses a Google Cloud SQL MySQL 8.0 instance named "mysql-db" located in the us-central1 region. The instance is created with the tier "db-f1-micro" and has private IP configured to connect to the default network.
 
-### Components
+A user named "admin" is created with password stored as a secret. The database connection name is outputted using an `output` block.
 
-The project includes the following components:
+#### GKE Cluster
 
-*   **Web Application**: A Docker image hosting the web application, running on port 8080.
-*   **Cloud SQL Proxy**: A container responsible for connecting to the Cloud SQL instance using the `cloudsql-proxy` image.
-*   **Secrets and Volumes**: Secrets and volumes are used to store sensitive data, such as database credentials and service account keys.
+The project creates a GKE cluster named "web-app-cluster" in the us-central1 region. The cluster has two replicas of the web application deployed as a deployment.
 
-### Data Flow
+The deployment uses a cloudsql-proxy container to connect to the MySQL database instance. The proxy is configured to use the service account credentials from a secret volume.
 
-The data flow is as follows:
+#### Service
 
-1.  The web application connects to the Cloud SQL proxy container.
-2.  The Cloud SQL proxy container authenticates with the Cloud SQL instance using the `cloudsql-proxy` image.
-3.  The Cloud SQL instance processes database queries from the web application.
+A Kubernetes service named "web-app-service" exposes the web application to the outside world. The service type is LoadBalancer, and it targets port 80 to the deployment's port 8080.
 
-### Logic
-
-The project uses Terraform for infrastructure as code (IaC) management and K8s for container orchestration. The `output.tf` file defines a connection name for the Cloud SQL instance, while the `variables.tf` file provides default values for variables such as the project ID, region, GKE cluster name, database user, and password.
-
-### Mermaid Diagrams
-
+### Diagrams
 ```mermaid
-graph TD
-    A[Web Application] -->|TCP 8080|> B(Cloud SQL Proxy)
-    B -->|TCP 3306|> C(Cloud SQL Instance)
+flowchart TD
+    A[Google Cloud SQL] -->|connection_name|> B[MySQL Database Instance]
+    C[GKE Cluster] -->|deployment|> D[Web Application]
+    E[CloudSQL Proxy] -->|credentials|> F[Service Account Credentials]
 ```
+### Tables
 
-This diagram shows the communication flow between the web application, Cloud SQL proxy, and Cloud SQL instance.
+| Component | Description |
+| --- | --- |
+| Google Cloud SQL | MySQL 8.0 instance with private IP and tier "db-f1-micro" |
+| GKE Cluster | Two replicas of web application deployed as a deployment |
+| Service | LoadBalancer service exposing port 80 to port 8080 |
 
 ### Code Snippets
-
 ```terraform
 output "sql_instance_connection_name" {
   value = google_sql_database_instance.mysql_instance.connection_name
 }
 ```
-
-This code snippet defines an output for the connection name of the Cloud SQL instance.
 
 ```yaml
 apiVersion: apps/v1
@@ -94,31 +87,29 @@ spec:
         image: gcr.io/YOUR_PROJECT_ID/your-app:latest
         ports:
         - containerPort: 8080
-        env:
-        - name: DB_HOST
-          value: 127.0.0.1
-        - name: DB_USER
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: username
-        - name: DB_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: db-credentials
-              key: password
 ```
 
-This code snippet defines a K8s deployment for the web application.
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-app-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: web
+  ports:
+    - port: 80
+      targetPort: 8080
+```
+### Source Citations
 
-Sources:
-
-*   [output.tf](output.tf):1-3
-*   [variables.tf](variables.tf):1-5
-*   [sql.tf](sql.tf):1-10
-*   [main.tf](main.tf):1-5
-*   [k8s/deployment.yaml](k8s/deployment.yaml):1-20
-*   [k8s/service.yaml](k8s/service.yaml):1-5
+* [output.tf](output.tf):1-2
+* [variables.tf](variables.tf):3-6,10-14
+* [sql.tf](sql.tf):1-12
+* [main.tf](main.tf):1-4
+* [k8s/deployment.yaml](k8s/deployment.yaml):1-15
+* [k8s/service.yaml](k8s/service.yaml):1-6
 
 _Generated by P4CodexIQ
 
@@ -126,31 +117,28 @@ _Generated by P4CodexIQ
 
 ```mermaid
 graph TD
-subgraph "Cloud Infrastructure"
-    A[Google Cloud Provider] -->|project_id|> B[Project]
-    A -->|region|> C[Region]
-end
+A[Variables] -->|References|> B[main.tf]
+B -->|Uses|> C[google.tf]
+C -->|Creates|> D[google_sql_database_instance]
+D -->|Has|> E[settings]
+E -->|Has|> F[ip_configuration]
+F -->|Configures|> G[private_network]
 
-subgraph "GKE Cluster"
-    D[Kubernetes Cluster] --> E[K8s Deployment]
-    F[K8s Service] --> E
-end
+A -->|References|> H[k8s/deployment.yaml]
+H -->|Uses|> I[appspec]
+I -->|Has|> J[replicas]
+J -->|Sets|> K[2]
+L[Templates] -->|Has|> M[metadata]
+M -->|Labels|> N[labels]
 
-subgraph "Database"
-    G[Google SQL Database Instance] --> H[MySQL DB]
-    I[Google SQL User] --> J[DB User]
-    K[Google SQL Password] --> L[DB Password]
-end
+P[main.tf] -->|Uses|> Q[k8s/service.yaml]
+R[Service] -->|Configures|> S[port]
+S -->|Maps|> T[targetPort]
+T -->|To|> U[8080]
 
-A -->|SQL Instance Connection Name|> M[Output]
-
-B -.-> N[GKE Cluster]
-C -.-> O[Region]
-E -.-> P[CloudSQL Proxy Container]
-F -.-> Q[Load Balancer]
-H -.-> R[Database Host]
-I -.-> S[DB User]
-K -.-> T[DB Password]
+E -->|Has|> V[tier]
+V -->|Sets|> W["db-f1-micro"]
+X[output.tf] -->|Outputs|> Y[sql_instance_connection_name]
 ```
 
 _Generated by P4CodexIQ
