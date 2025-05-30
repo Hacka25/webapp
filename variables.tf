@@ -11,3 +11,12 @@ variable "db_user" {
 variable "db_password" {
   sensitive = true
 }
+variable "aws_cluster_name" {
+  default = "web-app-cluster"
+}
+variable "aws_db_user" {
+  default = "admin"
+}
+variable "aws_db_password" {
+  sensitive = true
+}
