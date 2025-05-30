@@ -1,45 +1,57 @@
 # Project Overview
+### Introduction
+This project overview provides a comprehensive understanding of the infrastructure and architecture used in this cloud-native application. The project involves creating a scalable, secure, and highly available web application using Google Cloud Platform (GCP) services.
 
-Project Overview is a crucial feature that integrates multiple components to provide a comprehensive overview of the project's architecture, data flow, and key functionality. This document aims to provide a detailed explanation of the Project Overview feature, based on the provided [RELEVANT_SOURCE_FILES].
+The following files were used as context for generating this readme page:
+- [output.tf](output.tf)
+- [variables.tf](variables.tf)
+- [sql.tf](sql.tf)
+- [main.tf](main.tf)
+- [gke.tf](gke.tf)
+- [k8s/deployment.yaml](k8s/deployment.yaml)
+- [k8s/service.yaml](k8s/service.yaml)
+- [k8s/backend-service.yaml](k8s/backend-service.yaml)
+- [k8s/frontend-deployment.yaml](k8s/frontend-deployment.yaml)
+- [k8s/backend-deployment.yaml](k8s/backend-deployment.yaml)
+- [k8s/frontend-service.yaml](k8s/frontend-service.yaml)
 
-## Architecture
+### Architecture
+The application architecture is based on a microservices design, with multiple services communicating with each other using RESTful APIs. The services are deployed to separate Kubernetes (K8S) clusters:
 
-The Project Overview feature is built using Terraform, a popular infrastructure-as-code tool, and Kubernetes (K8s), an open-source container orchestration system. The architecture consists of three main components:
-
-1. **Google Cloud SQL**: A managed relational database service that provides MySQL 8.0 instances for storing application data.
-2. **Google Container Cluster** (GKE): A fully managed environment for deploying and managing containerized applications.
-3. **Kubernetes Deployments**: Managed deployments of containers, including the Web App and Backend services.
+* **Frontend**: Handles user requests and serves as the entry point for users.
+* **Backend**: Handles business logic and interacts with databases.
+* **Cloud SQL Proxy**: Enables secure communication between the application and Cloud SQL instances.
 
 ### Data Flow
+Data flows from the frontend to the backend, which then communicates with Cloud SQL instances. The application uses environment variables and secrets to manage sensitive information such as database credentials.
 
-The Project Overview feature collects data from various sources:
+### Mermaid Diagrams
 
-1. **Google Cloud SQL**: Retrieves database instance information, such as name, region, and connection details.
-2. **Google Container Cluster** (GKE): Obtains cluster and node pool information, including node counts and machine types.
-3. **Kubernetes Deployments**: Collects deployment metadata, including replica counts, container names, and ports.
-
-The collected data is then presented in a structured format, providing insights into the project's architecture and key components.
-
-## Detailed Sections
-
-### Component Overview
-
-* The Google Cloud SQL instance provides a MySQL 8.0 database for storing application data.
-* The Google Container Cluster (GKE) hosts containerized applications, including the Web App and Backend services.
-* Kubernetes Deployments manage the deployment and scaling of containers.
-
-### Architecture Diagram
-
+Sequence Diagram: [sequenceDiagram]
 ```mermaid
-graph TD
-    A[Google Cloud SQL] -->|database instance|> B[MySQL 8.0]
-    C[GKE] -->|container cluster|> D[Containerized Applications]
-    E[Kubernetes Deployments] -->|managed deployments|> F[Web App]
-    G[Kubernetes Deployments] -->|managed deployments|> H[Backend Services]
+sequenceDiagram
+    participant Frontend as "Frontend"
+    participant Backend as "Backend"
+    participant CloudSQLProxy as "CloudSQL Proxy"
+    participant MySQLInstance as "MySQL Instance"
+
+    Frontend->>Backend: User Request
+    Backend->>CloudSQLProxy: Database Query
+    CloudSQLProxy->>MySQLInstance: Connection Request
+    MySQLInstance-->>CloudSQLProxy: Data Response
+    CloudSQLProxy->>Backend: Data Response
+    Backend->>Frontend: Data Response
 ```
 
-### Code Snippets
+### Tables
 
+| Service | Description |
+| --- | --- |
+| Frontend | Handles user requests and serves as the entry point for users. |
+| Backend | Handles business logic and interacts with databases. |
+| Cloud SQL Proxy | Enables secure communication between the application and Cloud SQL instances. |
+
+### Code Snippets
 ```terraform
 output "gke_cluster_name" {
   value = google_container_cluster.primary.name
@@ -84,37 +96,21 @@ spec:
 ### Source Citations
 
 Sources:
+- [output.tf](output.tf):1-2
+- [variables.tf](variables.tf):1-5
+- [sql.tf](sql.tf):1-10
+- [main.tf](main.tf):1-5
+- [gke.tf](gke.tf):1-15
+- [k8s/deployment.yaml](k8s/deployment.yaml):1-20
+- [k8s/service.yaml](k8s/service.yaml):1-10
 
-* [output.tf](output.tf):1-3
-* [variables.tf](variables.tf):1-5
-* [sql.tf](sql.tf):1-10
-* [main.tf](main.tf):1-2
-* [gke.tf](gke.tf):1-5
-* [k8s/deployment.yaml](k8s/deployment.yaml):1-15
-* [k8s/service.yaml](k8s/service.yaml):1-5
-
-### Conclusion/Summary
-
-The Project Overview feature provides a comprehensive overview of the project's architecture, data flow, and key functionality. This feature integrates multiple components, including Google Cloud SQL, Google Container Cluster (GKE), and Kubernetes Deployments, to provide valuable insights into the project's structure and operations.
+### Technical Accuracy
+All information in this project overview is derived solely from the provided source files.
 
 _Generated by P4CodexIQ
 
 ## Architecture Diagram
 
-```mermaid
-graph TD
-  A[Variables] --> |project_id, region| B[Provider]
-  B[Provider] --> C[SQL Instance]
-  C[SQL Instance] --> D[DB User]
-  D[DB User] --> E[K8s Deployment]
-  E[K8s Deployment] --> F[CloudSQL Proxy]
-  F[CloudSQL Proxy] --> G[Secret]
-  A[Variables] --> |gke_cluster_name| H[GKE Cluster]
-  H[GKE Cluster] --> I[Node Pool]
-  I[Node Pool] --> J[K8s Service]
-  J[K8s Service] --> K[Load Balancer]
-  E[K8s Deployment] --> L[K8s Service]
-  L[K8s Service] --> M[Load Balancer]
-```
+> ⚠️ Mermaid diagram generation failed.
 
 _Generated by P4CodexIQ
